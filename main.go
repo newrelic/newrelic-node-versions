@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
+	flag "github.com/spf13/pflag"
 	"io"
 	"io/fs"
 	"os"
@@ -27,7 +28,6 @@ type resultsTableRow struct {
 	minSupportedVersion string
 }
 
-// TODO: support passing in a directory for the repo instead of always cloning
 func main() {
 	err := run(os.Args)
 	if err != nil {
@@ -37,19 +37,23 @@ func main() {
 }
 
 func run(args []string) error {
-	repoDir, err := os.MkdirTemp("", "newrelic")
+	err := createAndParseFlags(args)
 	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w", err)
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
 	}
-	defer os.RemoveAll(repoDir)
 
-	fmt.Println("Cloning repository ...")
-	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL:   nrRepo,
-		Depth: 1,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to clone newrelic repo: %w", err)
+	var repoDir string
+	if flags.repoDir != "" {
+		repoDir = flags.repoDir
+	} else {
+		rd, err := cloneRepo()
+		if err != nil {
+			return err
+		}
+		repoDir = rd
 	}
 
 	fmt.Println("Processing data ...")
@@ -57,18 +61,13 @@ func run(args []string) error {
 
 	iterChan := make(chan dirIterChan)
 	go iterateTestDir(versionedTestsDir, iterChan)
-	//err = iterateTestDir(versionedTestsDir)
-	//if err != nil {
-	//	return err
-	//}
-
-	table := []resultsTableRow{}
 
 	// The issue I have with this approach is that we don't get a single error
 	// that we can terminate the program with.
+	table := []resultsTableRow{}
 	for result := range iterChan {
 		if result.err != nil {
-			fmt.Println(err)
+			fmt.Println(result.err)
 			continue
 		}
 
@@ -162,4 +161,23 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	}
 
 	return &vtpj, nil
+}
+
+func cloneRepo() (string, error) {
+	repoDir, err := os.MkdirTemp("", "newrelic")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	fmt.Println("Cloning repository ...")
+	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
+		URL:   nrRepo,
+		Depth: 1,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to clone newrelic repo: %w", err)
+	}
+
+	return repoDir, nil
 }
