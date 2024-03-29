@@ -1,0 +1,24 @@
+# See https://taskfile.dev/
+#
+# e.g. `task -w test-cov`
+version: "3"
+
+tasks:
+  test:
+    cmds:
+      - go test ./...
+    sources:
+      - "**/*.go"
+
+  test-cov:
+    cmds:
+      - go test -cover ./...
+    sources:
+      - "**/*.go"
+
+  test-cov-html:
+    cmds:
+      - go test -coverprofile=./coverage.out ./...
+      - go tool cover -html=./coverage.out -o ./coverage.html
+    sources:
+      - "**/*.go"
