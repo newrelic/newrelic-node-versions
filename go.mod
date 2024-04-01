@@ -5,7 +5,6 @@ go 1.22.1
 require (
 	blitznote.com/src/semver/v3 v3.2.2
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
-	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/pflag v1.0.5

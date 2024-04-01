@@ -3,15 +3,18 @@ package main
 import (
 	"blitznote.com/src/semver/v3"
 	"errors"
+	"fmt"
 	"regexp"
 )
+
+var ErrTargetMissing = errors.New("target not found in dependencies list")
 
 type PkgInfo struct {
 	Name       string
 	MinVersion string
 }
 
-func parsePackage(pkg VersionedTestPackageJson) (*PkgInfo, error) {
+func parsePackage(pkg *VersionedTestPackageJson) (*PkgInfo, error) {
 	var lastVersion *semver.Range
 	target := pkg.Target
 
@@ -26,19 +29,16 @@ func parsePackage(pkg VersionedTestPackageJson) (*PkgInfo, error) {
 				continue
 			}
 
+			currentVersion, err := semver.NewRange([]byte(val.Versions))
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse version string `%s` for `%s`: %w", val.Versions, target, err)
+			}
+
 			if lastVersion == nil {
-				v, err := semver.NewRange([]byte(val.Versions))
-				if err != nil {
-					return nil, err
-				}
-				lastVersion = &v
+				lastVersion = &currentVersion
 				continue
 			}
 
-			currentVersion, err := semver.NewRange([]byte(val.Versions))
-			if err != nil {
-				return nil, err
-			}
 			if currentVersion.GetLowerBoundary().Less(*(lastVersion.GetLowerBoundary())) == true {
 				lastVersion = &currentVersion
 			}
@@ -46,7 +46,7 @@ func parsePackage(pkg VersionedTestPackageJson) (*PkgInfo, error) {
 	}
 
 	if lastVersion == nil {
-		return nil, errors.New("failed to find matching dependency in package.json")
+		return nil, fmt.Errorf("%s: %w", pkg.Name, ErrTargetMissing)
 	}
 
 	pkgInfo := &PkgInfo{

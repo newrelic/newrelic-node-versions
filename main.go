@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
 	flag "github.com/spf13/pflag"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const nrRepo = `https://github.com/newrelic/node-newrelic.git`
@@ -71,37 +69,17 @@ func run(args []string) error {
 			continue
 		}
 
-		// TODO: replace this with parsePackage
-		for _, test := range result.pkg.Tests {
-			//var constraint *semver.Constraints
-			var pkgName string
-			for key, val := range test.Dependencies {
-				fmt.Printf("%s : %s\n", result.name, key)
-				if strings.Contains(result.name, key) {
-					pkgName = key
-					if val.Versions == "latest" {
-						// the semver package doesn't support the latest string
-						continue
-					}
-
-					// We have found the module newrelic instruments and which we want
-					// to add to our table of results.
-					currentConstraint, err := semver.NewConstraint(val.Versions)
-					if err != nil {
-						return err
-					}
-					//if constraint == nil {
-					//	constraint = currentConstraint
-					//	continue
-					//}
-
-					table = append(
-						table,
-						resultsTableRow{name: pkgName, minSupportedVersion: currentConstraint.String()},
-					)
-				}
+		pkgInfo, err := parsePackage(result.pkg)
+		if err != nil {
+			if errors.Is(err, ErrTargetMissing) {
+				continue
 			}
+			return err
 		}
+		table = append(table, resultsTableRow{
+			name:                pkgInfo.Name,
+			minSupportedVersion: pkgInfo.MinVersion,
+		})
 	}
 
 	fmt.Println(table)
