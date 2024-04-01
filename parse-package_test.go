@@ -8,38 +8,44 @@ import (
 	"testing"
 )
 
-func Test_ParsePackage_Elastic(t *testing.T) {
+func testPkg(t *testing.T, jsonFile string, expected *PkgInfo) {
 	var pkgJson VersionedTestPackageJson
-	file, err := os.ReadFile("testdata/versioned/elastic/package.json")
+	file, err := os.ReadFile(jsonFile)
 	require.Nil(t, err)
 	err = json.Unmarshal(file, &pkgJson)
 	require.Nil(t, err)
 
-	t.Run("parses to correct representation", func(t *testing.T) {
-		expected := &PkgInfo{
-			Name:       "@elastic/elasticsearch",
-			MinVersion: "7.16.0",
-		}
-		found, err := parsePackage(pkgJson)
-		assert.Nil(t, err)
-		assert.Equal(t, expected, found)
-	})
+	found, err := parsePackage(pkgJson)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, found)
 }
 
-func Test_ParsePackage_Langchain(t *testing.T) {
-	var pkgJson VersionedTestPackageJson
-	file, err := os.ReadFile("testdata/versioned/langchain/package.json")
-	require.Nil(t, err)
-	err = json.Unmarshal(file, &pkgJson)
-	require.Nil(t, err)
+func Test_ParsePackage(t *testing.T) {
+	t.Run("handles out of order ranges", func(t *testing.T) {
+		testPkg(t, "testdata/out-of-order-ranges.json", &PkgInfo{
+			Name:       "foo",
+			MinVersion: "1.5.0",
+		})
+	})
 
-	t.Run("parses to correct representation", func(t *testing.T) {
-		expected := &PkgInfo{
+	t.Run("handles @elastic/elasticsearch", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/elastic/package.json", &PkgInfo{
+			Name:       "@elastic/elasticsearch",
+			MinVersion: "7.16.0",
+		})
+	})
+
+	t.Run("handles @langchain/core", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/langchain/package.json", &PkgInfo{
 			Name:       "@langchain/core",
 			MinVersion: "0.1.17",
-		}
-		found, err := parsePackage(pkgJson)
-		assert.Nil(t, err)
-		assert.Equal(t, expected, found)
+		})
+	})
+
+	t.Run("handles mongodb", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/mongodb/package.json", &PkgInfo{
+			Name:       "mongodb",
+			MinVersion: "2.1.0",
+		})
 	})
 }

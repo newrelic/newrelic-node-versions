@@ -7,3 +7,4 @@
    verified
    2. A `supported: false` key+value on any test descriptors that are testing
    _unsupported_ versions, see the `elastic` test descriptor for 7.13.0
+   3. All version strings are full x.y.z strings. The semver library requires it.

@@ -34,6 +34,14 @@ func parsePackage(pkg VersionedTestPackageJson) (*PkgInfo, error) {
 				lastVersion = &v
 				continue
 			}
+
+			currentVersion, err := semver.NewRange([]byte(val.Versions))
+			if err != nil {
+				return nil, err
+			}
+			if currentVersion.GetLowerBoundary().Less(*(lastVersion.GetLowerBoundary())) == true {
+				lastVersion = &currentVersion
+			}
 		}
 	}
 

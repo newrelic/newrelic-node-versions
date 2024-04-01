@@ -1,0 +1,33 @@
+{
+  "name": "out-of-order",
+  "target": "foo",
+  "version": "0.0.0",
+  "private": true,
+  "tests": [
+    {
+      "engines": {
+        "node": ">=16"
+      },
+      "dependencies": {
+        "foo": {
+          "versions": ">=4.0.0",
+          "samples": "2"
+        }
+      },
+      "files": []
+    },
+    {
+      "engines": {
+        "node": ">=16"
+      },
+      "dependencies": {
+        "foo": ">=1.5.0"
+      },
+      "files": []
+    }
+  ],
+  "dependencies": {},
+  "engines": {
+    "node": ">=16"
+  }
+}
