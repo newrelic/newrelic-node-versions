@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-git/go-git/v5"
+	"github.com/jedib0t/go-pretty/v6/table"
 	flag "github.com/spf13/pflag"
 	"io"
 	"io/fs"
@@ -62,7 +63,8 @@ func run(args []string) error {
 
 	// The issue I have with this approach is that we don't get a single error
 	// that we can terminate the program with.
-	table := []resultsTableRow{}
+	outputTable := table.NewWriter()
+	outputTable.AppendHeader(table.Row{"Name", "MinVersion"})
 	for result := range iterChan {
 		if result.err != nil {
 			fmt.Println(result.err)
@@ -76,13 +78,11 @@ func run(args []string) error {
 			}
 			return err
 		}
-		table = append(table, resultsTableRow{
-			name:                pkgInfo.Name,
-			minSupportedVersion: pkgInfo.MinVersion,
-		})
+		outputTable.AppendRow(table.Row{pkgInfo.Name, pkgInfo.MinVersion})
 	}
 
-	fmt.Println(table)
+	outputTable.SortBy([]table.SortBy{{Name: "Name", Mode: table.Asc}})
+	fmt.Println(outputTable.Render())
 
 	return nil
 }
