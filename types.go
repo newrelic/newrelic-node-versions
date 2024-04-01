@@ -9,6 +9,7 @@ import (
 
 type VersionedTestPackageJson struct {
 	Name    string            `json:"name"`
+	Target  string            `json:"target"`
 	Version string            `json:"version"`
 	Private bool              `json:"private"`
 	Tests   []TestDescription `json:"tests"`

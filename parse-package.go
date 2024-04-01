@@ -3,9 +3,7 @@ package main
 import (
 	"blitznote.com/src/semver/v3"
 	"errors"
-	"fmt"
 	"regexp"
-	"strings"
 )
 
 type PkgInfo struct {
@@ -13,9 +11,9 @@ type PkgInfo struct {
 	MinVersion string
 }
 
-func parsePackage(versionedDirName string, pkg VersionedTestPackageJson) (*PkgInfo, error) {
-	var pkgName string
+func parsePackage(pkg VersionedTestPackageJson) (*PkgInfo, error) {
 	var lastVersion *semver.Range
+	target := pkg.Target
 
 	// TODO: write tests for other packages and flesh out algorithm
 	for _, test := range pkg.Tests {
@@ -24,7 +22,7 @@ func parsePackage(versionedDirName string, pkg VersionedTestPackageJson) (*PkgIn
 		}
 
 		for key, val := range test.Dependencies {
-			if depMatchesTarget(versionedDirName, key) == false {
+			if key != target {
 				continue
 			}
 
@@ -34,7 +32,6 @@ func parsePackage(versionedDirName string, pkg VersionedTestPackageJson) (*PkgIn
 					return nil, err
 				}
 				lastVersion = &v
-				pkgName = key
 				continue
 			}
 		}
@@ -45,7 +42,7 @@ func parsePackage(versionedDirName string, pkg VersionedTestPackageJson) (*PkgIn
 	}
 
 	pkgInfo := &PkgInfo{
-		Name:       pkgName,
+		Name:       target,
 		MinVersion: lastVersion.GetLowerBoundary().String(),
 	}
 
@@ -57,22 +54,6 @@ func parsePackage(versionedDirName string, pkg VersionedTestPackageJson) (*PkgIn
 // we want to use the _range_ as the minimum version, not the specific
 // version.
 func isSpecificBelowRange(specific string, rng string) bool {
-	return false
-}
-
-func depMatchesTarget(target string, depName string) bool {
-	if target == depName {
-		return true
-	}
-
-	if strings.HasPrefix(depName, fmt.Sprintf("@%s/", target)) == true {
-		return true
-	}
-
-	if strings.Contains(depName, target) == true {
-		return true
-	}
-
 	return false
 }
 

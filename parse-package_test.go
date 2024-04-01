@@ -20,7 +20,7 @@ func Test_ParsePackage_Elastic(t *testing.T) {
 			Name:       "@elastic/elasticsearch",
 			MinVersion: "7.16.0",
 		}
-		found, err := parsePackage("elastic", pkgJson)
+		found, err := parsePackage(pkgJson)
 		assert.Nil(t, err)
 		assert.Equal(t, expected, found)
 	})
