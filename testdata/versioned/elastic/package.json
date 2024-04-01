@@ -1,0 +1,34 @@
+{
+  "name": "elasticsearch-tests",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=16"
+  },
+  "tests": [
+    {
+      "supported": false,
+      "comment": "Used to assert our instrumentation does not get loaded on old versions.",
+      "engines": {
+        "node": ">=16"
+      },
+      "dependencies": {
+        "@elastic/elasticsearch": "7.13.0"
+      },
+      "files": [
+        "elasticsearchNoop.tap.js"
+      ]
+    },
+    {
+      "engines": {
+        "node": ">=16"
+      },
+      "dependencies": {
+        "@elastic/elasticsearch": ">=7.16.0"
+      },
+      "files": [
+        "elasticsearch.tap.js"
+      ]
+    }
+  ]
+}

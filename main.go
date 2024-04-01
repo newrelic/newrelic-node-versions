@@ -71,10 +71,12 @@ func run(args []string) error {
 			continue
 		}
 
+		// TODO: replace this with parsePackage
 		for _, test := range result.pkg.Tests {
 			//var constraint *semver.Constraints
 			var pkgName string
 			for key, val := range test.Dependencies {
+				fmt.Printf("%s : %s\n", result.name, key)
 				if strings.Contains(result.name, key) {
 					pkgName = key
 					if val.Versions == "latest" {
@@ -84,18 +86,18 @@ func run(args []string) error {
 
 					// We have found the module newrelic instruments and which we want
 					// to add to our table of results.
-					currentContraint, err := semver.NewConstraint(val.Versions)
+					currentConstraint, err := semver.NewConstraint(val.Versions)
 					if err != nil {
 						return err
 					}
 					//if constraint == nil {
-					//	constraint = currentContraint
+					//	constraint = currentConstraint
 					//	continue
 					//}
 
 					table = append(
 						table,
-						resultsTableRow{name: pkgName, minSupportedVersion: currentContraint.String()},
+						resultsTableRow{name: pkgName, minSupportedVersion: currentConstraint.String()},
 					)
 				}
 			}
