@@ -1,6 +1,7 @@
 package main
 
 import (
+	"blitznote.com/src/semver/v3"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sync"
 )
 
@@ -112,7 +114,19 @@ func run(args []string) error {
 	}
 
 	wg.Wait()
-	renderAsAscii(data, os.Stdout)
+
+	slices.SortFunc(data, func(a ReleaseData, b ReleaseData) int {
+		if a.Name == b.Name {
+			return 0
+		}
+		switch a.Name > b.Name {
+		case true:
+			return 1
+		default:
+			return -1
+		}
+	})
+	renderAsAscii(pruneData(data), os.Stdout)
 
 	return nil
 }
@@ -210,6 +224,38 @@ func cloneRepo() (string, error) {
 	return repoDir, nil
 }
 
+// pruneData removes duplicate entries from the data set. A duplicate entry
+// is one in which the [ReleaseData.Name] is equal. The entry with the lowest
+// [ReleaseData.MinSupportedVersion] will be kept. The data should be sorted
+// prior to being pruned.
+func pruneData(data []ReleaseData) []ReleaseData {
+	result := make([]ReleaseData, 0)
+	for i := 0; i < len(data); {
+		if i == len(data)-1 {
+			break
+		}
+
+		a := data[i]
+		b := data[i+1]
+		if a.Name != b.Name {
+			result = append(result, a)
+			i += 1
+			continue
+		}
+
+		verA, _ := semver.NewVersion([]byte(a.MinSupportedVersion))
+		verB, _ := semver.NewVersion([]byte(b.MinSupportedVersion))
+		if verA.Less(verB) {
+			result = append(result, a)
+		} else {
+			result = append(result, b)
+		}
+		i += 2
+	}
+
+	return result
+}
+
 // renderAsAscii renders the collected data as an ASCII table. This is
 // intended to be used when generating local CLI output during testing.
 func renderAsAscii(data []ReleaseData, writer io.Writer) {
@@ -234,7 +280,6 @@ func renderAsAscii(data []ReleaseData, writer io.Writer) {
 		outputTable.AppendRow(row)
 	}
 
-	outputTable.SortBy([]table.SortBy{{Name: "Name", Mode: table.Asc}})
 	writer.Write(
 		[]byte(outputTable.Render()),
 	)
