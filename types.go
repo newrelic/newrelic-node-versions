@@ -7,6 +7,16 @@ import (
 	"github.com/spf13/cast"
 )
 
+// ReleaseData represents a row of information about a package. Specifically,
+// it's the final computed information to be rendered into documents.
+type ReleaseData struct {
+	Name                       string
+	MinSupportedVersion        string
+	MinSupportedVersionRelease string
+	LatestVersion              string
+	LatestVersionRelease       string
+}
+
 type VersionedTestPackageJson struct {
 	Name    string            `json:"name"`
 	Target  string            `json:"target"`

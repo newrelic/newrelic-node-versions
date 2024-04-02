@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 )
 
 const nrRepo = `https://github.com/newrelic/node-newrelic.git`
@@ -21,12 +22,6 @@ type dirIterChan struct {
 	name string
 	pkg  *VersionedTestPackageJson
 	err  error
-}
-
-// TODO: use npm api to fully construct https://newrelic.atlassian.net/wiki/spaces/INST/pages/3269656658/Node+Compatibility+Research
-type resultsTableRow struct {
-	name                string
-	minSupportedVersion string
 }
 
 func main() {
@@ -46,23 +41,7 @@ func run(args []string) error {
 		return err
 	}
 
-	var logger *slog.Logger
-	if flags.verbose == true {
-		logger = slog.New(
-			// TODO: replace with https://github.com/dusted-go/logging/issues/3
-			slog.NewTextHandler(
-				os.Stderr,
-				&slog.HandlerOptions{Level: slog.LevelDebug},
-			),
-		)
-	} else {
-		logger = slog.New(
-			slog.NewTextHandler(
-				os.Stderr,
-				&slog.HandlerOptions{Level: slog.LevelError},
-			),
-		)
-	}
+	logger := buildLogger(flags.verbose)
 
 	var repoDir string
 	if flags.repoDir != "" {
@@ -81,7 +60,9 @@ func run(args []string) error {
 	iterChan := make(chan dirIterChan)
 	go iterateTestDir(versionedTestsDir, iterChan)
 
-	data := make([]*PkgInfo, 0)
+	npm := NewNpmClient()
+	wg := sync.WaitGroup{}
+	data := make([]ReleaseData, 0)
 	for result := range iterChan {
 		if result.err != nil {
 			logger.Error(result.err.Error())
@@ -96,12 +77,62 @@ func run(args []string) error {
 			}
 			return err
 		}
-		data = append(data, pkgInfo)
+
+		wg.Add(1)
+		// TODO: handle errors better. Probably refactor into something like the dirIter goroutine
+		go func(info *PkgInfo) {
+			logger.Debug("getting detailed package info", "package", info.Name)
+			defer wg.Done()
+
+			latest, err := npm.GetLatest(info.Name)
+			if err != nil {
+				logger.Error(err.Error())
+				return
+			}
+
+			detailedInfo, err := npm.GetDetailedInfo(info.Name)
+			if err != nil {
+				logger.Error(err.Error())
+				return
+			}
+
+			minReleaseDate := detailedInfo.Time[pkgInfo.MinVersion]
+			minReleaseStr := fmt.Sprintf("%d-%02d-%02d", minReleaseDate.Year(), minReleaseDate.Month(), minReleaseDate.Day())
+			latestReleaseDate := detailedInfo.Time[latest]
+			latestReleaseStr := fmt.Sprintf("%d-%02d-%02d", latestReleaseDate.Year(), latestReleaseDate.Month(), latestReleaseDate.Day())
+
+			data = append(data, ReleaseData{
+				Name:                       pkgInfo.Name,
+				MinSupportedVersion:        pkgInfo.MinVersion,
+				MinSupportedVersionRelease: minReleaseStr,
+				LatestVersion:              latest,
+				LatestVersionRelease:       latestReleaseStr,
+			})
+		}(pkgInfo)
 	}
 
+	wg.Wait()
 	renderAsAscii(data, os.Stdout)
 
 	return nil
+}
+
+func buildLogger(verbose bool) *slog.Logger {
+	if verbose == true {
+		return slog.New(
+			// TODO: replace with https://github.com/dusted-go/logging/issues/3
+			slog.NewTextHandler(
+				os.Stderr,
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			),
+		)
+	}
+	return slog.New(
+		slog.NewTextHandler(
+			os.Stderr,
+			&slog.HandlerOptions{Level: slog.LevelError},
+		),
+	)
 }
 
 func iterateTestDir(dir string, iterChan chan dirIterChan) {
@@ -181,12 +212,12 @@ func cloneRepo() (string, error) {
 
 // renderAsAscii renders the collected data as an ASCII table. This is
 // intended to be used when generating local CLI output during testing.
-func renderAsAscii(data []*PkgInfo, writer io.Writer) {
+func renderAsAscii(data []ReleaseData, writer io.Writer) {
 	outputTable := table.NewWriter()
 
 	keys := make([]string, 0)
 	header := table.Row{}
-	rv := reflect.ValueOf(PkgInfo{})
+	rv := reflect.ValueOf(ReleaseData{})
 	rt := rv.Type()
 	for i := 0; i < rv.NumField(); i += 1 {
 		header = append(header, rt.Field(i).Name)
@@ -196,7 +227,7 @@ func renderAsAscii(data []*PkgInfo, writer io.Writer) {
 
 	for _, info := range data {
 		row := table.Row{}
-		rv = reflect.ValueOf(*info)
+		rv = reflect.ValueOf(info)
 		for _, key := range keys {
 			row = append(row, rv.FieldByName(key).Interface())
 		}
