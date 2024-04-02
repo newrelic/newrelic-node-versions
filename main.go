@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 const nrRepo = `https://github.com/newrelic/node-newrelic.git`
@@ -61,10 +62,7 @@ func run(args []string) error {
 	iterChan := make(chan dirIterChan)
 	go iterateTestDir(versionedTestsDir, iterChan)
 
-	// The issue I have with this approach is that we don't get a single error
-	// that we can terminate the program with.
-	outputTable := table.NewWriter()
-	outputTable.AppendHeader(table.Row{"Name", "MinVersion"})
+	data := make([]*PkgInfo, 0)
 	for result := range iterChan {
 		if result.err != nil {
 			fmt.Println(result.err)
@@ -78,11 +76,10 @@ func run(args []string) error {
 			}
 			return err
 		}
-		outputTable.AppendRow(table.Row{pkgInfo.Name, pkgInfo.MinVersion})
+		data = append(data, pkgInfo)
 	}
 
-	outputTable.SortBy([]table.SortBy{{Name: "Name", Mode: table.Asc}})
-	fmt.Println(outputTable.Render())
+	renderAsAscii(data, os.Stdout)
 
 	return nil
 }
@@ -160,4 +157,34 @@ func cloneRepo() (string, error) {
 	}
 
 	return repoDir, nil
+}
+
+// renderAsAscii renders the collected data as an ASCII table. This is
+// intended to be used when generating local CLI output during testing.
+func renderAsAscii(data []*PkgInfo, writer io.Writer) {
+	outputTable := table.NewWriter()
+
+	keys := make([]string, 0)
+	header := table.Row{}
+	rv := reflect.ValueOf(PkgInfo{})
+	rt := rv.Type()
+	for i := 0; i < rv.NumField(); i += 1 {
+		header = append(header, rt.Field(i).Name)
+		keys = append(keys, rt.Field(i).Name)
+	}
+	outputTable.AppendHeader(header)
+
+	for _, info := range data {
+		row := table.Row{}
+		rv = reflect.ValueOf(*info)
+		for _, key := range keys {
+			row = append(row, rv.FieldByName(key).Interface())
+		}
+		outputTable.AppendRow(row)
+	}
+
+	outputTable.SortBy([]table.SortBy{{Name: "Name", Mode: table.Asc}})
+	writer.Write(
+		[]byte(outputTable.Render()),
+	)
 }
