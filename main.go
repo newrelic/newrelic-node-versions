@@ -9,6 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -45,6 +46,24 @@ func run(args []string) error {
 		return err
 	}
 
+	var logger *slog.Logger
+	if flags.verbose == true {
+		logger = slog.New(
+			// TODO: replace with https://github.com/dusted-go/logging/issues/3
+			slog.NewTextHandler(
+				os.Stderr,
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			),
+		)
+	} else {
+		logger = slog.New(
+			slog.NewTextHandler(
+				os.Stderr,
+				&slog.HandlerOptions{Level: slog.LevelError},
+			),
+		)
+	}
+
 	var repoDir string
 	if flags.repoDir != "" {
 		repoDir = flags.repoDir
@@ -56,7 +75,7 @@ func run(args []string) error {
 		repoDir = rd
 	}
 
-	fmt.Println("Processing data ...")
+	logger.Debug("Processing data ...")
 	versionedTestsDir := filepath.Join(repoDir, "test", "versioned")
 
 	iterChan := make(chan dirIterChan)
@@ -65,13 +84,14 @@ func run(args []string) error {
 	data := make([]*PkgInfo, 0)
 	for result := range iterChan {
 		if result.err != nil {
-			fmt.Println(result.err)
+			logger.Error(result.err.Error())
 			continue
 		}
 
 		pkgInfo, err := parsePackage(result.pkg)
 		if err != nil {
 			if errors.Is(err, ErrTargetMissing) {
+				logger.Debug(err.Error())
 				continue
 			}
 			return err

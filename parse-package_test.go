@@ -15,7 +15,7 @@ func testPkg(t *testing.T, jsonFile string, expected *PkgInfo) {
 	err = json.Unmarshal(file, &pkgJson)
 	require.Nil(t, err)
 
-	found, err := parsePackage(pkgJson)
+	found, err := parsePackage(&pkgJson)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, found)
 }

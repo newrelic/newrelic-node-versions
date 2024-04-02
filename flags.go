@@ -8,6 +8,7 @@ import (
 
 type appFlags struct {
 	repoDir string
+	verbose bool
 }
 
 var flags = appFlags{}
@@ -35,6 +36,18 @@ func createAndParseFlags(args []string) error {
 			Specify a local directory that contains the node-newrelic repo.
 			If not provided, the GitHub repository will be cloned to a local temporary
 			directory and that will be used.
+		`),
+	)
+
+	fs.BoolVarP(
+		&flags.verbose,
+		"verbose",
+		"v",
+		false,
+		heredoc.Doc(`
+			Enable verbose output. As the data is being loaded and parsed various
+			logs will be written to stderr that should give indicators of what
+			is happening.
 		`),
 	)
 
