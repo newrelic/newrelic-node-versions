@@ -99,16 +99,14 @@ func run(args []string) error {
 			}
 
 			minReleaseDate := detailedInfo.Time[pkgInfo.MinVersion]
-			minReleaseStr := fmt.Sprintf("%d-%02d-%02d", minReleaseDate.Year(), minReleaseDate.Month(), minReleaseDate.Day())
 			latestReleaseDate := detailedInfo.Time[latest]
-			latestReleaseStr := fmt.Sprintf("%d-%02d-%02d", latestReleaseDate.Year(), latestReleaseDate.Month(), latestReleaseDate.Day())
 
 			data = append(data, ReleaseData{
 				Name:                       pkgInfo.Name,
 				MinSupportedVersion:        pkgInfo.MinVersion,
-				MinSupportedVersionRelease: minReleaseStr,
+				MinSupportedVersionRelease: minReleaseDate.ToFullDate().ToString(),
 				LatestVersion:              latest,
-				LatestVersionRelease:       latestReleaseStr,
+				LatestVersionRelease:       latestReleaseDate.ToFullDate().ToString(),
 			})
 		}(pkgInfo)
 	}
