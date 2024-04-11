@@ -1,6 +1,6 @@
 {
   "name": "out-of-order",
-  "target": "foo",
+  "targets": ["foo"],
   "version": "0.0.0",
   "private": true,
   "tests": [

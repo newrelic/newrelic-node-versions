@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func testPkg(t *testing.T, jsonFile string, expected *PkgInfo) {
+func testPkg(t *testing.T, jsonFile string, expected []PkgInfo) {
 	var pkgJson VersionedTestPackageJson
 	file, err := os.ReadFile(jsonFile)
 	require.Nil(t, err)
@@ -22,30 +22,30 @@ func testPkg(t *testing.T, jsonFile string, expected *PkgInfo) {
 
 func Test_ParsePackage(t *testing.T) {
 	t.Run("handles out of order ranges", func(t *testing.T) {
-		testPkg(t, "testdata/out-of-order-ranges.json", &PkgInfo{
+		testPkg(t, "testdata/out-of-order-ranges.json", []PkgInfo{{
 			Name:       "foo",
 			MinVersion: "1.5.0",
-		})
+		}})
 	})
 
 	t.Run("handles @elastic/elasticsearch", func(t *testing.T) {
-		testPkg(t, "testdata/versioned/elastic/package.json", &PkgInfo{
+		testPkg(t, "testdata/versioned/elastic/package.json", []PkgInfo{{
 			Name:       "@elastic/elasticsearch",
 			MinVersion: "7.16.0",
-		})
+		}})
 	})
 
 	t.Run("handles @langchain/core", func(t *testing.T) {
-		testPkg(t, "testdata/versioned/langchain/package.json", &PkgInfo{
+		testPkg(t, "testdata/versioned/langchain/package.json", []PkgInfo{{
 			Name:       "@langchain/core",
 			MinVersion: "0.1.17",
-		})
+		}})
 	})
 
 	t.Run("handles mongodb", func(t *testing.T) {
-		testPkg(t, "testdata/versioned/mongodb/package.json", &PkgInfo{
+		testPkg(t, "testdata/versioned/mongodb/package.json", []PkgInfo{{
 			Name:       "mongodb",
 			MinVersion: "2.1.0",
-		})
+		}})
 	})
 }

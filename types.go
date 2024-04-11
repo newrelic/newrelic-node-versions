@@ -19,7 +19,7 @@ type ReleaseData struct {
 
 type VersionedTestPackageJson struct {
 	Name    string            `json:"name"`
-	Target  string            `json:"target"`
+	Targets []string          `json:"targets"`
 	Version string            `json:"version"`
 	Private bool              `json:"private"`
 	Tests   []TestDescription `json:"tests"`
