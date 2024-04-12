@@ -1,14 +1,9 @@
 package main
 
 import (
-	"blitznote.com/src/semver/v3"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/MakeNowJust/heredoc/v2"
-	"github.com/go-git/go-git/v5"
-	"github.com/jedib0t/go-pretty/v6/table"
-	flag "github.com/spf13/pflag"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -17,9 +12,25 @@ import (
 	"reflect"
 	"slices"
 	"sync"
+
+	"blitznote.com/src/semver/v3"
+	"github.com/go-git/go-git/v5"
+	"github.com/MakeNowJust/heredoc/v2"
+	"github.com/jedib0t/go-pretty/v6/table"
+	flag "github.com/spf13/pflag"
 )
 
-const nrRepo = `https://github.com/newrelic/node-newrelic.git`
+
+var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, testPath: `test/versioned`}
+var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, testPath: `tests/versioned`}
+var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, testPath: `tests/versioned`}
+
+
+type nrRepo struct {
+  url string
+  testPath string
+  repoDir string
+}
 
 type dirIterChan struct {
 	name string
@@ -47,30 +58,48 @@ func run(args []string) error {
 	logger := buildLogger(flags.verbose)
 
 	var repoDir string
+  //var repos []nrRepo
+  var testDir string
 	if flags.repoDir != "" {
 		repoDir = flags.repoDir
+	  //var testDir string
+    if flags.testDir != "" {
+      testDir = flags.testDir
+    } else {
+      testDir = "test/versioned"
+    }
+    //repos := []nrRepo{repoDir: repoDir, testPath: testDir}
 	} else {
-		rd, err := cloneRepo()
-		if err != nil {
-			return err
-		}
-		repoDir = rd
+    /*repos := []nrRepo{agentRepo, apolloRepo, nextRepo}
+    // TODO: make this pass data to sub routing
+    repoChan := make(chan repoChan)
+    for _,repo := range repos {
+      rd, err := go cloneRepo(repo.url) 
+      repo.testDir = rd
+      if err != nil {
+        return err
+      }
+    }
+    */
 	}
 
-	logger.Debug("Processing data ...")
-	versionedTestsDir := filepath.Join(repoDir, "test", "versioned")
+  wg := sync.WaitGroup{}
+  logger.Debug("Processing data ...")
+  //for _,repo := range repos {
+    //var repoDir = repo.repoDir
+    //var testDir = repo.testPath
+    versionedTestsDir := filepath.Join(repoDir, testDir)
 
-	iterChan := make(chan dirIterChan)
-	go iterateTestDir(versionedTestsDir, iterChan)
+    iterChan := make(chan dirIterChan)
+    go iterateTestDir(versionedTestsDir, iterChan)
 
-	npm := NewNpmClient()
-	wg := sync.WaitGroup{}
-	data := make([]ReleaseData, 0)
-	for result := range iterChan {
-		if result.err != nil {
-			logger.Error(result.err.Error())
-			continue
-		}
+    npm := NewNpmClient()
+    data := make([]ReleaseData, 0)
+    for result := range iterChan {
+      if result.err != nil {
+        logger.Error(result.err.Error())
+        continue
+      }
 
 		pkgInfos, err := parsePackage(result.pkg)
 		if err != nil {
@@ -166,6 +195,15 @@ func buildReleaseData(info PkgInfo, npm *NpmClient) (*ReleaseData, error) {
 	return result, nil
 }
 
+func isDir(path string) bool {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return fileInfo.IsDir()
+}
+
 func iterateTestDir(dir string, iterChan chan dirIterChan) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -176,32 +214,34 @@ func iterateTestDir(dir string, iterChan chan dirIterChan) {
 
 	for _, entry := range entries {
 		testDir := filepath.Join(dir, entry.Name())
-		pkgJsonFilePath := filepath.Join(dir, entry.Name(), "package.json")
-		pkgJsonFile, err := os.Open(pkgJsonFilePath)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				// Some versioned tests, e.g. the "restify" tests, have subdirectories
-				// that split the tests into multiple suites. We determine this by
-				// recognizing that a `testdir/package.json` does not exist.
-				iterateTestDir(testDir, iterChan)
-				return
+		if isDir(testDir) {
+			pkgJsonFilePath := filepath.Join(testDir, "package.json")
+			pkgJsonFile, err := os.Open(pkgJsonFilePath)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					// Some versioned tests, e.g. the "restify" tests, have subdirectories
+					// that split the tests into multiple suites. We determine this by
+					// recognizing that a `testdir/package.json` does not exist.
+					iterateTestDir(testDir, iterChan)
+					return
+				}
+				iterChan <- dirIterChan{
+					name: entry.Name(),
+					err:  fmt.Errorf("could not find package.json in `%s`: %w", testDir, err),
+				}
+				continue
 			}
-			iterChan <- dirIterChan{
-				name: entry.Name(),
-				err:  fmt.Errorf("could not find package.json in `%s`: %w", testDir, err),
-			}
-			continue
-		}
 
-		pkg, err := readPackageJson(pkgJsonFile)
-		if err != nil {
-			iterChan <- dirIterChan{
-				name: entry.Name(),
-				err:  fmt.Errorf("failed to read package.json for `%s`: %w", entry.Name(), err),
+			pkg, err := readPackageJson(pkgJsonFile)
+			if err != nil {
+				iterChan <- dirIterChan{
+					name: entry.Name(),
+					err:  fmt.Errorf("failed to read package.json for `%s`: %w", entry.Name(), err),
+				}
+				continue
 			}
-			continue
+			iterChan <- dirIterChan{name: entry.Name(), pkg: pkg}
 		}
-		iterChan <- dirIterChan{name: entry.Name(), pkg: pkg}
 	}
 
 	close(iterChan)
@@ -222,7 +262,7 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	return &vtpj, nil
 }
 
-func cloneRepo() (string, error) {
+func cloneRepo(repo string) (string, error) {
 	repoDir, err := os.MkdirTemp("", "newrelic")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
@@ -231,7 +271,7 @@ func cloneRepo() (string, error) {
 
 	fmt.Println("Cloning repository ...")
 	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL:   nrRepo,
+		URL: repo,
 		Depth: 1,
 	})
 	if err != nil {
