@@ -26,6 +26,7 @@ var apolloRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-apollo-
 var nextRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-nextjs.git`, branch: `add-targets`, testPath: `tests/versioned`}
 
 type nrRepo struct {
+  repoDir  string
 	url      string
 	branch   string
 	testPath string
@@ -62,24 +63,21 @@ func run(args []string) error {
 
 	logger := buildLogger(flags.verbose)
 
-	//var repoDir string
-	//var repos []nrRepo
-	//var testDir string
-	/*if flags.repoDir != "" {
-			repoDir = flags.repoDir
-	    if flags.testDir != "" {
-	      testDir = flags.testDir
-	    } else {
-	      testDir = "test/versioned"
-	    }
-	    repos = []nrRepo{repoDir: repoDir, testPath: testDir}
-		} else {
-	    repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
-	    repoChan := make(chan repoIterChan)
-	    go cloneRepos(repos, repoChan)
-		}
-	*/
-	repos := []nrRepo{agentRepo, apolloRepo, nextRepo}
+	var repos []nrRepo
+	if flags.repoDir != "" {
+    var testDir string
+    repoDir := flags.repoDir
+    if flags.testDir != "" {
+      testDir = flags.testDir
+    } else {
+      testDir = "test/versioned"
+    }
+    var testRepo = nrRepo{repoDir: repoDir, testPath: testDir}
+    repos = []nrRepo{testRepo}
+  } else {
+    repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
+  }
+
 	repoChan := make(chan repoIterChan)
 	go cloneRepos(repos, repoChan)
 
@@ -274,6 +272,14 @@ func cloneRepos(repos []nrRepo, repoChan chan repoIterChan) {
 	//wg := sync.WaitGroup{}
 	for _, repo := range repos {
 		//wg.Add(1)
+    if repo.repoDir != "" {
+      repoChan <- repoIterChan{
+        repoDir: repo.repoDir,
+        testPath: repo.testPath,
+      }
+      continue
+    }
+
 		repoDir, err := cloneRepo(repo.url, repo.branch)
 		if err != nil {
 			repoChan <- repoIterChan{
