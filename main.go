@@ -14,8 +14,8 @@ import (
 	"sync"
 
 	"blitznote.com/src/semver/v3"
-	"github.com/go-git/go-git/v5"
 	"github.com/MakeNowJust/heredoc/v2"
+	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/jedib0t/go-pretty/v6/table"
 	flag "github.com/spf13/pflag"
@@ -26,7 +26,7 @@ var apolloRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-apollo-
 var nextRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-nextjs.git`, branch: `add-targets`, testPath: `tests/versioned`}
 
 type nrRepo struct {
-  repoDir  string
+	repoDir  string
 	url      string
 	branch   string
 	testPath string
@@ -65,21 +65,23 @@ func run(args []string) error {
 
 	var repos []nrRepo
 	if flags.repoDir != "" {
-    var testDir string
-    repoDir := flags.repoDir
-    if flags.testDir != "" {
-      testDir = flags.testDir
-    } else {
-      testDir = "test/versioned"
-    }
-    var testRepo = nrRepo{repoDir: repoDir, testPath: testDir}
-    repos = []nrRepo{testRepo}
-  } else {
-    repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
-  }
+		var testDir string
+		repoDir := flags.repoDir
+		if flags.testDir != "" {
+			testDir = flags.testDir
+		} else {
+			testDir = "test/versioned"
+		}
+		var testRepo = nrRepo{repoDir: repoDir, testPath: testDir}
+		repos = []nrRepo{testRepo}
+	} else {
+		repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
+	}
 
 	repoChan := make(chan repoIterChan)
-	go cloneRepos(repos, repoChan)
+	cloneWg := sync.WaitGroup{}
+	go cloneRepos(repos, repoChan, cloneWg)
+	cloneWg.Wait()
 
 	wg := sync.WaitGroup{}
 	logger.Debug("Processing data ...")
@@ -268,19 +270,18 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	return &vtpj, nil
 }
 
-func cloneRepos(repos []nrRepo, repoChan chan repoIterChan) {
-	//wg := sync.WaitGroup{}
+func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg sync.WaitGroup) {
 	for _, repo := range repos {
-		//wg.Add(1)
-    if repo.repoDir != "" {
-      repoChan <- repoIterChan{
-        repoDir: repo.repoDir,
-        testPath: repo.testPath,
-      }
-      continue
-    }
+		wg.Add(1)
+		if repo.repoDir != "" {
+			repoChan <- repoIterChan{
+				repoDir:  repo.repoDir,
+				testPath: repo.testPath,
+			}
+			continue
+		}
 
-		repoDir, err := cloneRepo(repo.url, repo.branch)
+		repoDir, err := cloneRepo(repo.url, repo.branch, wg)
 		if err != nil {
 			repoChan <- repoIterChan{
 				err: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
@@ -293,16 +294,15 @@ func cloneRepos(repos []nrRepo, repoChan chan repoIterChan) {
 		}
 	}
 
-	//wg.Wait()
 	close(repoChan)
 }
 
-func cloneRepo(repo string, branch string) (string, error) {
+func cloneRepo(repo string, branch string, wg sync.WaitGroup) (string, error) {
+	defer wg.Done()
 	repoDir, err := os.MkdirTemp("", "newrelic")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
-	//defer os.RemoveAll(repoDir)
 
 	fmt.Println("Cloning repository ...")
 	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{

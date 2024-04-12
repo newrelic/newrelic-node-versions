@@ -10,7 +10,7 @@ import (
 type appFlags struct {
 	outputFormat *StringEnumValue
 	repoDir      string
-  testDir      string
+	testDir      string
 	verbose      bool
 }
 
@@ -68,16 +68,16 @@ func createAndParseFlags(args []string) error {
 		`),
 	)
 
-  fs.StringVarP(
-    &flags.testDir,
-    "testDir",
-    "t",
-    "",
-    heredoc.Doc(`
+	fs.StringVarP(
+		&flags.testDir,
+		"testDir",
+		"t",
+		"",
+		heredoc.Doc(`
       Specify the test directory to parse the package.json files.
       If not provide, it will default to 'test/versioned'.
     `),
-  )
+	)
 
 	// TODO: add flags for generating different formats:
 	// 1. markdown (for GitHub repo)
