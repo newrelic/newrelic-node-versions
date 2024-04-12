@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"github.com/MakeNowJust/heredoc/v2"
 	flag "github.com/spf13/pflag"
+	"slices"
 )
 
 type appFlags struct {
-	repoDir string
-	verbose bool
+	outputFormat *StringEnumValue
+	repoDir      string
+	verbose      bool
 }
 
 var flags = appFlags{}
@@ -26,6 +28,20 @@ func createAndParseFlags(args []string) error {
 	fs.Usage = func() {
 		printUsage(fs.FlagUsages())
 	}
+
+	flags.outputFormat = NewStringEnumValue(
+		[]string{"ascii", "markdown"},
+		"ascii",
+	)
+	fs.VarP(
+		flags.outputFormat,
+		"output-format",
+		"o",
+		heredoc.Doc(`
+			Specify the format to write the results as. The default is an ASCII
+			table. Possible values: "ascii" or "markdown".
+		`),
+	)
 
 	fs.StringVarP(
 		&flags.repoDir,
@@ -62,4 +78,37 @@ func createAndParseFlags(args []string) error {
 func printUsage(help string) {
 	fmt.Println(usageText)
 	fmt.Println(help)
+}
+
+// StringEnumValue is a custom [flag.Value] implementation that
+// allows a specific set of string values.
+// See https://github.com/spf13/pflag/issues/236#issuecomment-931600452
+type StringEnumValue struct {
+	allowed []string
+	value   string
+}
+
+func NewStringEnumValue(allowed []string, def string) *StringEnumValue {
+	return &StringEnumValue{
+		allowed: allowed,
+		value:   def,
+	}
+}
+
+func (sev *StringEnumValue) String() string {
+	return sev.value
+}
+
+func (sev *StringEnumValue) Set(val string) error {
+	if slices.Contains(sev.allowed, val) == false {
+		return fmt.Errorf("%s is not an allowed value", val)
+	}
+
+	sev.value = val
+
+	return nil
+}
+
+func (sev *StringEnumValue) Type() string {
+	return "string"
 }
