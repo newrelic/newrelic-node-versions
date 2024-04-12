@@ -71,7 +71,7 @@ func run(args []string) error {
 			continue
 		}
 
-		pkgInfo, err := parsePackage(result.pkg)
+		pkgInfos, err := parsePackage(result.pkg)
 		if err != nil {
 			if errors.Is(err, ErrTargetMissing) {
 				logger.Debug(err.Error())
@@ -80,35 +80,20 @@ func run(args []string) error {
 			return err
 		}
 
-		wg.Add(1)
 		// TODO: handle errors better. Probably refactor into something like the dirIter goroutine
-		go func(info *PkgInfo) {
-			logger.Debug("getting detailed package info", "package", info.Name)
-			defer wg.Done()
-
-			latest, err := npm.GetLatest(info.Name)
-			if err != nil {
-				logger.Error(err.Error())
-				return
-			}
-
-			detailedInfo, err := npm.GetDetailedInfo(info.Name)
-			if err != nil {
-				logger.Error(err.Error())
-				return
-			}
-
-			minReleaseDate := detailedInfo.Time[pkgInfo.MinVersion]
-			latestReleaseDate := detailedInfo.Time[latest]
-
-			data = append(data, ReleaseData{
-				Name:                       pkgInfo.Name,
-				MinSupportedVersion:        pkgInfo.MinVersion,
-				MinSupportedVersionRelease: minReleaseDate.ToFullDate().ToString(),
-				LatestVersion:              latest,
-				LatestVersionRelease:       latestReleaseDate.ToFullDate().ToString(),
-			})
-		}(pkgInfo)
+		for _, info := range pkgInfos {
+			wg.Add(1)
+			go func(info PkgInfo) {
+				defer wg.Done()
+				logger.Debug("getting detailed package info", "package", info.Name)
+				releaseData, err := buildReleaseData(info, npm)
+				if err != nil {
+					logger.Error(err.Error())
+					return
+				}
+				data = append(data, *releaseData)
+			}(info)
+		}
 	}
 
 	wg.Wait()
@@ -145,6 +130,31 @@ func buildLogger(verbose bool) *slog.Logger {
 			&slog.HandlerOptions{Level: slog.LevelError},
 		),
 	)
+}
+
+func buildReleaseData(info PkgInfo, npm *NpmClient) (*ReleaseData, error) {
+	latest, err := npm.GetLatest(info.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	detailedInfo, err := npm.GetDetailedInfo(info.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	minReleaseDate := detailedInfo.Time[info.MinVersion]
+	latestReleaseDate := detailedInfo.Time[latest]
+
+	result := &ReleaseData{
+		Name:                       info.Name,
+		MinSupportedVersion:        info.MinVersion,
+		MinSupportedVersionRelease: minReleaseDate.ToFullDate().ToString(),
+		LatestVersion:              latest,
+		LatestVersionRelease:       latestReleaseDate.ToFullDate().ToString(),
+	}
+
+	return result, nil
 }
 
 func iterateTestDir(dir string, iterChan chan dirIterChan) {
