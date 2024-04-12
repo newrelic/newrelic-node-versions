@@ -16,26 +16,31 @@ import (
 	"blitznote.com/src/semver/v3"
 	"github.com/go-git/go-git/v5"
 	"github.com/MakeNowJust/heredoc/v2"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/jedib0t/go-pretty/v6/table"
 	flag "github.com/spf13/pflag"
 )
 
-
-var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, testPath: `test/versioned`}
-var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, testPath: `tests/versioned`}
-var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, testPath: `tests/versioned`}
-
+var agentRepo = nrRepo{url: `https://github.com/jsumners-nr/node-newrelic.git`, branch: `versioned-tests-meta-update`, testPath: `test/versioned`}
+var apolloRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-apollo-server-plugin.git`, branch: `add-target`, testPath: `tests/versioned`}
+var nextRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-nextjs.git`, branch: `add-targets`, testPath: `tests/versioned`}
 
 type nrRepo struct {
-  url string
-  testPath string
-  repoDir string
+	url      string
+	branch   string
+	testPath string
 }
 
 type dirIterChan struct {
 	name string
 	pkg  *VersionedTestPackageJson
 	err  error
+}
+
+type repoIterChan struct {
+	repoDir  string
+	testPath string
+	err      error
 }
 
 func main() {
@@ -57,76 +62,79 @@ func run(args []string) error {
 
 	logger := buildLogger(flags.verbose)
 
-	var repoDir string
-  //var repos []nrRepo
-  var testDir string
-	if flags.repoDir != "" {
-		repoDir = flags.repoDir
-	  //var testDir string
-    if flags.testDir != "" {
-      testDir = flags.testDir
-    } else {
-      testDir = "test/versioned"
-    }
-    //repos := []nrRepo{repoDir: repoDir, testPath: testDir}
-	} else {
-    /*repos := []nrRepo{agentRepo, apolloRepo, nextRepo}
-    // TODO: make this pass data to sub routing
-    repoChan := make(chan repoChan)
-    for _,repo := range repos {
-      rd, err := go cloneRepo(repo.url) 
-      repo.testDir = rd
-      if err != nil {
-        return err
-      }
-    }
-    */
-	}
+	//var repoDir string
+	//var repos []nrRepo
+	//var testDir string
+	/*if flags.repoDir != "" {
+			repoDir = flags.repoDir
+	    if flags.testDir != "" {
+	      testDir = flags.testDir
+	    } else {
+	      testDir = "test/versioned"
+	    }
+	    repos = []nrRepo{repoDir: repoDir, testPath: testDir}
+		} else {
+	    repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
+	    repoChan := make(chan repoIterChan)
+	    go cloneRepos(repos, repoChan)
+		}
+	*/
+	repos := []nrRepo{agentRepo, apolloRepo, nextRepo}
+	repoChan := make(chan repoIterChan)
+	go cloneRepos(repos, repoChan)
 
-  wg := sync.WaitGroup{}
-  logger.Debug("Processing data ...")
-  //for _,repo := range repos {
-    //var repoDir = repo.repoDir
-    //var testDir = repo.testPath
-    versionedTestsDir := filepath.Join(repoDir, testDir)
+	wg := sync.WaitGroup{}
+	logger.Debug("Processing data ...")
+	data := make([]ReleaseData, 0)
+	for repo := range repoChan {
+		if repo.err != nil {
+			logger.Error(repo.err.Error())
+			continue
+		}
+		var repoDir = repo.repoDir
+		var testDir = repo.testPath
+		versionedTestsDir := filepath.Join(repoDir, testDir)
 
-    iterChan := make(chan dirIterChan)
-    go iterateTestDir(versionedTestsDir, iterChan)
+		iterChan := make(chan dirIterChan)
+		go iterateTestDir(versionedTestsDir, iterChan)
 
-    npm := NewNpmClient()
-    data := make([]ReleaseData, 0)
-    for result := range iterChan {
-      if result.err != nil {
-        logger.Error(result.err.Error())
-        continue
-      }
-
-		pkgInfos, err := parsePackage(result.pkg)
-		if err != nil {
-			if errors.Is(err, ErrTargetMissing) {
-				logger.Debug(err.Error())
+		npm := NewNpmClient()
+		for result := range iterChan {
+			if result.err != nil {
+				logger.Error(result.err.Error())
 				continue
 			}
-			return err
-		}
 
-		// TODO: handle errors better. Probably refactor into something like the dirIter goroutine
-		for _, info := range pkgInfos {
-			wg.Add(1)
-			go func(info PkgInfo) {
-				defer wg.Done()
-				logger.Debug("getting detailed package info", "package", info.Name)
-				releaseData, err := buildReleaseData(info, npm)
-				if err != nil {
-					logger.Error(err.Error())
-					return
+			pkgInfos, err := parsePackage(result.pkg)
+			if err != nil {
+				if errors.Is(err, ErrTargetMissing) {
+					logger.Debug(err.Error())
+					continue
 				}
-				data = append(data, *releaseData)
-			}(info)
+				return err
+			}
+
+			// TODO: handle errors better. Probably refactor into something like the dirIter goroutine
+			for _, info := range pkgInfos {
+				wg.Add(1)
+				go func(info PkgInfo) {
+					defer wg.Done()
+					logger.Debug("getting detailed package info", "package", info.Name)
+					releaseData, err := buildReleaseData(info, npm)
+					if err != nil {
+						logger.Error(err.Error())
+						return
+					}
+					data = append(data, *releaseData)
+				}(info)
+			}
 		}
 	}
 
 	wg.Wait()
+	for repo := range repoChan {
+		os.RemoveAll(repo.repoDir)
+	}
 
 	slices.SortFunc(data, func(a ReleaseData, b ReleaseData) int {
 		if a.Name == b.Name {
@@ -262,17 +270,39 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	return &vtpj, nil
 }
 
-func cloneRepo(repo string) (string, error) {
+func cloneRepos(repos []nrRepo, repoChan chan repoIterChan) {
+	//wg := sync.WaitGroup{}
+	for _, repo := range repos {
+		//wg.Add(1)
+		repoDir, err := cloneRepo(repo.url, repo.branch)
+		if err != nil {
+			repoChan <- repoIterChan{
+				err: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
+			}
+		}
+
+		repoChan <- repoIterChan{
+			repoDir:  repoDir,
+			testPath: repo.testPath,
+		}
+	}
+
+	//wg.Wait()
+	close(repoChan)
+}
+
+func cloneRepo(repo string, branch string) (string, error) {
 	repoDir, err := os.MkdirTemp("", "newrelic")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
-	defer os.RemoveAll(repoDir)
+	//defer os.RemoveAll(repoDir)
 
 	fmt.Println("Cloning repository ...")
 	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL: repo,
-		Depth: 1,
+		URL:           repo,
+		ReferenceName: plumbing.ReferenceName(branch),
+		Depth:         1,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to clone newrelic repo: %w", err)
