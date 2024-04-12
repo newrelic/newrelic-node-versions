@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/go-git/go-git/v5"
 	"github.com/jedib0t/go-pretty/v6/table"
 	flag "github.com/spf13/pflag"
@@ -109,7 +110,15 @@ func run(args []string) error {
 			return -1
 		}
 	})
-	renderAsAscii(pruneData(data), os.Stdout)
+	prunedData := pruneData(data)
+	switch flags.outputFormat.String() {
+	default:
+		renderAsAscii(prunedData, os.Stdout)
+	case "ascii":
+		renderAsAscii(prunedData, os.Stdout)
+	case "markdown":
+		renderAsMarkdown(prunedData, os.Stdout)
+	}
 
 	return nil
 }
@@ -267,6 +276,29 @@ func pruneData(data []ReleaseData) []ReleaseData {
 // renderAsAscii renders the collected data as an ASCII table. This is
 // intended to be used when generating local CLI output during testing.
 func renderAsAscii(data []ReleaseData, writer io.Writer) {
+	outputTable := releaseDataToTable(data)
+	io.WriteString(writer, outputTable.Render())
+}
+
+func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
+	outputTable := releaseDataToTable(data)
+	io.WriteString(
+		writer,
+		heredoc.Docf(`
+			## Instrumented Modules
+
+			The following table lists the modules that the %[1]newrelic%[1] Node.js
+			agent instruments, along with the minimum version of the module the agent
+			supports, the release date of that minimum version, and the version plus
+			release date of the most recent version (as of the time this document
+			was generated).
+		`, "`"),
+	)
+	io.WriteString(writer, "\n")
+	io.WriteString(writer, outputTable.RenderMarkdown())
+}
+
+func releaseDataToTable(data []ReleaseData) table.Writer {
 	outputTable := table.NewWriter()
 
 	keys := make([]string, 0)
@@ -288,7 +320,5 @@ func renderAsAscii(data []ReleaseData, writer io.Writer) {
 		outputTable.AppendRow(row)
 	}
 
-	writer.Write(
-		[]byte(outputTable.Render()),
-	)
+	return outputTable
 }
