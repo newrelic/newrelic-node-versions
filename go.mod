@@ -1,6 +1,6 @@
 module nrversions
 
-go 1.22.1
+go 1.22
 
 require (
 	blitznote.com/src/semver/v3 v3.2.2

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-var ErrTargetMissing = errors.New("target not found in dependencies list")
+var ErrTargetMissing = errors.New("targets not found in dependencies list")
 
 type PkgInfo struct {
 	Name       string

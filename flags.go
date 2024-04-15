@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
+	"slices"
+
 	"github.com/MakeNowJust/heredoc/v2"
 	flag "github.com/spf13/pflag"
-	"slices"
 )
 
 type appFlags struct {
 	outputFormat *StringEnumValue
 	repoDir      string
+	testDir      string
 	verbose      bool
 }
 
@@ -65,6 +67,17 @@ func createAndParseFlags(args []string) error {
 			logs will be written to stderr that should give indicators of what
 			is happening.
 		`),
+	)
+
+	fs.StringVarP(
+		&flags.testDir,
+		"test-dir",
+		"t",
+		"",
+		heredoc.Doc(`
+      Specify the test directory to parse the package.json files.
+      If not provided, it will default to 'test/versioned'.
+    `),
 	)
 
 	// TODO: add flags for generating different formats:
