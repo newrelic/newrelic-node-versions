@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"slices"
+
 	"github.com/MakeNowJust/heredoc/v2"
 	flag "github.com/spf13/pflag"
-	"slices"
 )
 
 type appFlags struct {
@@ -70,12 +71,12 @@ func createAndParseFlags(args []string) error {
 
 	fs.StringVarP(
 		&flags.testDir,
-		"testDir",
+		"test-dir",
 		"t",
 		"",
 		heredoc.Doc(`
       Specify the test directory to parse the package.json files.
-      If not provide, it will default to 'test/versioned'.
+      If not provided, it will default to 'test/versioned'.
     `),
 	)
 

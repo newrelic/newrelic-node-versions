@@ -83,8 +83,7 @@ func run(args []string) error {
 	go cloneRepos(repos, repoChan, cloneWg)
 	cloneWg.Wait()
 
-	wg := sync.WaitGroup{}
-	logger.Debug("Processing data ...")
+	testDirs := make([]string, 0)
 	data := make([]ReleaseData, 0)
 	for repo := range repoChan {
 		if repo.err != nil {
@@ -94,7 +93,14 @@ func run(args []string) error {
 		var repoDir = repo.repoDir
 		var testDir = repo.testPath
 		versionedTestsDir := filepath.Join(repoDir, testDir)
+		testDirs = append(testDirs, versionedTestsDir)
+	}
+	cloneWg.Wait()
 
+	wg := sync.WaitGroup{}
+	logger.Debug("Processing data ...")
+
+	for _, versionedTestsDir := range testDirs {
 		iterChan := make(chan dirIterChan)
 		go iterateTestDir(versionedTestsDir, iterChan)
 
