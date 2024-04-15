@@ -81,7 +81,6 @@ func run(args []string) error {
 	repoChan := make(chan repoIterChan)
 	cloneWg := sync.WaitGroup{}
 	go cloneRepos(repos, repoChan, cloneWg)
-	cloneWg.Wait()
 
 	testDirs := make([]string, 0)
 	data := make([]ReleaseData, 0)
