@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -208,16 +207,29 @@ func buildReleaseData(info PkgInfo, npm *NpmClient) (*ReleaseData, error) {
 	return result, nil
 }
 
-func isDir(path string) bool {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-
-	return fileInfo.IsDir()
+func openPackageJson(path string) (*os.File, error) {
+	pkgJsonFilePath := filepath.Join(path, "package.json")
+	return os.Open(pkgJsonFilePath)
 }
 
 func iterateTestDir(dir string, iterChan chan dirIterChan) {
+	// try to parse package.json from root
+	// in this case it is the only result
+	// so end early
+	rootPkgJson, _ := openPackageJson(dir)
+	if rootPkgJson != nil {
+		pkg, err := readPackageJson(rootPkgJson)
+		if err != nil {
+			iterChan <- dirIterChan{
+				name: dir,
+				err:  fmt.Errorf("failed to read package.json for `%s`: %w", dir, err),
+			}
+		}
+		iterChan <- dirIterChan{name: dir, pkg: pkg}
+		close(iterChan)
+		return
+	}
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		iterChan <- dirIterChan{err: fmt.Errorf("failed to read directory `%s`: %w", dir, err)}
@@ -227,17 +239,9 @@ func iterateTestDir(dir string, iterChan chan dirIterChan) {
 
 	for _, entry := range entries {
 		testDir := filepath.Join(dir, entry.Name())
-		if isDir(testDir) {
-			pkgJsonFilePath := filepath.Join(testDir, "package.json")
-			pkgJsonFile, err := os.Open(pkgJsonFilePath)
+		if entry.IsDir() {
+			pkgJsonFile, err := openPackageJson(testDir)
 			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					// Some versioned tests, e.g. the "restify" tests, have subdirectories
-					// that split the tests into multiple suites. We determine this by
-					// recognizing that a `testdir/package.json` does not exist.
-					iterateTestDir(testDir, iterChan)
-					return
-				}
 				iterChan <- dirIterChan{
 					name: entry.Name(),
 					err:  fmt.Errorf("could not find package.json in `%s`: %w", testDir, err),
@@ -330,6 +334,8 @@ func pruneData(data []ReleaseData) []ReleaseData {
 	result := make([]ReleaseData, 0)
 	for i := 0; i < len(data); {
 		if i == len(data)-1 {
+			// only one result, just assign to result
+			result = append(result, data[i])
 			break
 		}
 
