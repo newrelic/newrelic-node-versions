@@ -47,12 +47,3 @@ To all contributors, we thank you!  Without your contribution, this project woul
 ## License
 [Project Name] is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
 >[If applicable: The [project name] also uses source code from third-party libraries. You can find full details on which libraries are used and the terms under which they are licensed in the third-party notices document.]
-
-## Notes
-
-1. Update all versioned test package.json files with:
-   1. A top-level `target` key that indicates the module instrumentation being
-   verified
-   2. A `supported: false` key+value on any test descriptors that are testing
-   _unsupported_ versions, see the `elastic` test descriptor for 7.13.0
-   3. All version strings are full x.y.z strings. The semver library requires it.
