@@ -1,4 +1,4 @@
-module nrversions
+module newrelic-versions
 
 go 1.22
 

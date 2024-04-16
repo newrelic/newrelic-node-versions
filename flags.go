@@ -51,8 +51,8 @@ func createAndParseFlags(args []string) error {
 		"r",
 		"",
 		heredoc.Doc(`
-			Specify a local directory that contains the node-newrelic repo.
-			If not provided, the GitHub repository will be cloned to a local temporary
+			Specify a local directory that contains a Node.js agent repo.
+			If not provided, the default GitHub repositories will be cloned to a local temporary
 			directory and that will be used.
 		`),
 	)
@@ -81,7 +81,6 @@ func createAndParseFlags(args []string) error {
 	)
 
 	// TODO: add flags for generating different formats:
-	// 1. markdown (for GitHub repo)
 	// 2. docs site
 	// They should also generate new PRs for the respective repos.
 
