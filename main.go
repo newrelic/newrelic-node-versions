@@ -20,9 +20,9 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var agentRepo = nrRepo{url: `https://github.com/jsumners-nr/node-newrelic.git`, branch: `versioned-tests-meta-update`, testPath: `test/versioned`}
-var apolloRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-apollo-server-plugin.git`, branch: `add-target`, testPath: `tests/versioned`}
-var nextRepo = nrRepo{url: `https://github.com/bizob2828/newrelic-node-nextjs.git`, branch: `add-targets`, testPath: `tests/versioned`}
+var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, branch: `main`, testPath: `test/versioned`}
+var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`}
+var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`}
 
 type nrRepo struct {
 	repoDir  string
