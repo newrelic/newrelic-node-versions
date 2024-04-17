@@ -14,7 +14,7 @@ go install github.com/newrelic/newrelic-node-versions@latest
 ## Usage
 
 ```sh
-./newrelic-versions
+./nrversions
 ```
 
 Will output a compatibility report like this
@@ -65,7 +65,7 @@ Will output a compatibility report like this
 For optional CLI args, run:
 
 ```sh
-❯ ./newrelic-versions -help
+❯ ./nrversions -help
 
 This tool is used to generate a document detailing the modules that
 the newrelic Node.js agent instruments and the version ranges of those
