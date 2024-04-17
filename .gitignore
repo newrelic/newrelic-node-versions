@@ -3,7 +3,6 @@
 local/
 dist/
 nrversions
-newrelic-versions
 vendor/
 
 coverage.*
