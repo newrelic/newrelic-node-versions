@@ -33,7 +33,7 @@ func createAndParseFlags(args []string) error {
 
 	flags.outputFormat = NewStringEnumValue(
 		[]string{"ascii", "markdown"},
-		"ascii",
+		"markdown",
 	)
 	fs.VarP(
 		flags.outputFormat,

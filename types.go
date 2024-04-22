@@ -4,8 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
 	"github.com/spf13/cast"
 )
+
+type nrRepo struct {
+	repoDir  string
+	url      string
+	branch   string
+	testPath string
+}
+
+type dirIterChan struct {
+	name string
+	pkg  *VersionedTestPackageJson
+	err  error
+}
+
+type repoIterChan struct {
+	repoDir  string
+	testPath string
+	err      error
+}
 
 // ReleaseData represents a row of information about a package. Specifically,
 // it's the final computed information to be rendered into documents.
@@ -15,11 +35,17 @@ type ReleaseData struct {
 	MinSupportedVersionRelease string
 	LatestVersion              string
 	LatestVersionRelease       string
+	MinAgentVersion            string
+}
+
+type Target struct {
+	Name            string `json:"name"`
+	MinAgentVersion string `json:"minAgentVersion"`
 }
 
 type VersionedTestPackageJson struct {
 	Name    string            `json:"name"`
-	Targets []string          `json:"targets"`
+	Targets []Target          `json:"targets"`
 	Version string            `json:"version"`
 	Private bool              `json:"private"`
 	Tests   []TestDescription `json:"tests"`
