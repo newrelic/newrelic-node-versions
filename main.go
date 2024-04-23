@@ -24,24 +24,7 @@ var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, bra
 var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`}
 var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`}
 
-type nrRepo struct {
-	repoDir  string
-	url      string
-	branch   string
-	testPath string
-}
-
-type dirIterChan struct {
-	name string
-	pkg  *VersionedTestPackageJson
-	err  error
-}
-
-type repoIterChan struct {
-	repoDir  string
-	testPath string
-	err      error
-}
+var columHeaders = map[string]string{"Name": `Package Name`, "MinSupportedVersion": `Minimum Supported Version`, "LatestVersion": `Latest Supported Version`, "MinAgentVersion": `Minimum Agent Version*`}
 
 func main() {
 	err := run(os.Args)
@@ -202,6 +185,7 @@ func buildReleaseData(info PkgInfo, npm *NpmClient) (*ReleaseData, error) {
 		MinSupportedVersionRelease: minReleaseDate.ToFullDate().ToString(),
 		LatestVersion:              latest,
 		LatestVersionRelease:       latestReleaseDate.ToFullDate().ToString(),
+		MinAgentVersion:            info.MinAgentVersion,
 	}
 
 	return result, nil
@@ -371,18 +355,24 @@ func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
 	outputTable := releaseDataToTable(data)
 	io.WriteString(
 		writer,
-		heredoc.Docf(`
+		heredoc.Doc(`
 			## Instrumented Modules
 
-			The following table lists the modules that the %[1]newrelic%[1] Node.js
-			agent instruments, along with the minimum version of the module the agent
-			supports, the release date of that minimum version, and the version plus
-			release date of the most recent version (as of the time this document
-			was generated).
-		`, "`"),
+			After installation, the agent automatically instruments with our catalog of supported Node.js libraries and frameworks. This gives you immediate access to granular information specific to your web apps and servers.  For unsupported frameworks or libraries, you'll need to instrument the agent yourself using the [Node.js agent API](https://docs.newrelic.com/docs/apm/agents/nodejs-agent/api-guides/nodejs-agent-api/).
+
+			**Note**: The latest supported version may not reflect the most recent supported version.
+
+		`),
 	)
 	io.WriteString(writer, "\n")
 	io.WriteString(writer, outputTable.RenderMarkdown())
+	io.WriteString(writer, "\n\n")
+	io.WriteString(
+		writer,
+		heredoc.Docf(`
+			*When package is not specified, support is within the %snewrelic%s package.
+		`, "`", "`"),
+	)
 }
 
 func releaseDataToTable(data []ReleaseData) table.Writer {
@@ -393,8 +383,11 @@ func releaseDataToTable(data []ReleaseData) table.Writer {
 	rv := reflect.ValueOf(ReleaseData{})
 	rt := rv.Type()
 	for i := 0; i < rv.NumField(); i += 1 {
-		header = append(header, rt.Field(i).Name)
-		keys = append(keys, rt.Field(i).Name)
+		var value = rt.Field(i).Name
+		if columnHeader, ok := columHeaders[value]; ok {
+			header = append(header, columnHeader)
+			keys = append(keys, value)
+		}
 	}
 	outputTable.AppendHeader(header)
 

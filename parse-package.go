@@ -1,16 +1,18 @@
 package main
 
 import (
-	"blitznote.com/src/semver/v3"
 	"errors"
 	"fmt"
+
+	"blitznote.com/src/semver/v3"
 )
 
 var ErrTargetMissing = errors.New("targets not found in dependencies list")
 
 type PkgInfo struct {
-	Name       string
-	MinVersion string
+	Name            string
+	MinVersion      string
+	MinAgentVersion string
 }
 
 func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
@@ -25,7 +27,7 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 			}
 
 			for key, val := range test.Dependencies {
-				if key != target {
+				if key != target.Name {
 					continue
 				}
 
@@ -50,8 +52,9 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 		}
 
 		pkgInfo := PkgInfo{
-			Name:       target,
-			MinVersion: lastVersion.GetLowerBoundary().String(),
+			Name:            target.Name,
+			MinVersion:      lastVersion.GetLowerBoundary().String(),
+			MinAgentVersion: target.MinAgentVersion,
 		}
 		results = append(results, pkgInfo)
 	}
