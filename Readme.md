@@ -9,6 +9,13 @@ This is a utility used by the New Relic Node.js agent team.  It will clone `node
 go install github.com/newrelic/newrelic-node-versions@latest
 ```
 
+### Tools
+
+This project relies on some community tools that require extra installation:
+
++ [Task](https://taskfile.dev): `go install github.com/go-task/task/v3/cmd/task@latest`
++ [golangci-lint](https://golangci-lint.run): `github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
+
 ## Getting Started
 
 ## Usage
