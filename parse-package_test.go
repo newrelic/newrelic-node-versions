@@ -23,29 +23,33 @@ func testPkg(t *testing.T, jsonFile string, expected []PkgInfo) {
 func Test_ParsePackage(t *testing.T) {
 	t.Run("handles out of order ranges", func(t *testing.T) {
 		testPkg(t, "testdata/out-of-order-ranges.json", []PkgInfo{{
-			Name:       "foo",
-			MinVersion: "1.5.0",
+			Name:            "foo",
+			MinVersion:      "1.5.0",
+			MinAgentVersion: "0.0.0",
 		}})
 	})
 
 	t.Run("handles @elastic/elasticsearch", func(t *testing.T) {
 		testPkg(t, "testdata/versioned/elastic/package.json", []PkgInfo{{
-			Name:       "@elastic/elasticsearch",
-			MinVersion: "7.16.0",
+			Name:            "@elastic/elasticsearch",
+			MinVersion:      "7.16.0",
+			MinAgentVersion: "1.2.3",
 		}})
 	})
 
 	t.Run("handles @langchain/core", func(t *testing.T) {
 		testPkg(t, "testdata/versioned/langchain/package.json", []PkgInfo{{
-			Name:       "@langchain/core",
-			MinVersion: "0.1.17",
+			Name:            "@langchain/core",
+			MinVersion:      "0.1.17",
+			MinAgentVersion: "2.1.3",
 		}})
 	})
 
 	t.Run("handles mongodb", func(t *testing.T) {
 		testPkg(t, "testdata/versioned/mongodb/package.json", []PkgInfo{{
-			Name:       "mongodb",
-			MinVersion: "2.1.0",
+			Name:            "mongodb",
+			MinVersion:      "2.1.0",
+			MinAgentVersion: "1.0.0",
 		}})
 	})
 }
