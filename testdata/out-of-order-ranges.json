@@ -1,6 +1,6 @@
 {
   "name": "out-of-order",
-  "targets": ["foo"],
+  "targets": [{ "name": "foo", "minAgentVersion": "0.0.0" }],
   "version": "0.0.0",
   "private": true,
   "tests": [

@@ -4,17 +4,31 @@
 version: "3"
 
 tasks:
+  build:
+    cmds:
+      - go build ./...
+    sources:
+      - "**/*.go"
+
+  lint:
+    cmds:
+      - golangci-lint run ./...
+    sources:
+      - "**/*.go"
+
   test:
     cmds:
       - go test ./...
     sources:
       - "**/*.go"
+      - "**/package.json"
 
   test-cov:
     cmds:
       - go test -cover ./...
     sources:
       - "**/*.go"
+      - "**/package.json"
 
   test-cov-html:
     cmds:
@@ -22,3 +36,4 @@ tasks:
       - go tool cover -html=./coverage.out -o ./coverage.html
     sources:
       - "**/*.go"
+      - "**/package.json"
