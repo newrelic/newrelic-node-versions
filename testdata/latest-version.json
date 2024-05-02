@@ -1,0 +1,13 @@
+{
+  "name": "latest-range",
+  "targets": [{ "name": "foo", "minAgentVersion": "1.0.0" }],
+  "tests": [
+    {
+      "dependencies": {
+        "foo": {
+          "versions": "latest"
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"blitznote.com/src/semver/v3"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,4 +53,67 @@ func Test_ParsePackage(t *testing.T) {
 			MinAgentVersion: "1.0.0",
 		}})
 	})
+
+	t.Run("gets minimum range from ordered ORed ranges", func(t *testing.T) {
+		testPkg(t, "testdata/ordered-or-range.json", []PkgInfo{{
+			Name:            "foo",
+			MinVersion:      "1.0.0",
+			MinAgentVersion: "1.0.0",
+		}})
+	})
+
+	t.Run("gets minimum range from unordered ORed ranges", func(t *testing.T) {
+		testPkg(t, "testdata/unordered-or-range.json", []PkgInfo{{
+			Name:            "foo",
+			MinVersion:      "1.0.0",
+			MinAgentVersion: "1.0.0",
+		}})
+	})
+
+	t.Run("handles `latest` version string", func(t *testing.T) {
+		testPkg(t, "testdata/latest-version.json", []PkgInfo{{
+			Name:            "foo",
+			MinVersion:      "0.0.0",
+			MinAgentVersion: "1.0.0",
+		}})
+	})
+}
+
+func Test_normalizeRangeString(t *testing.T) {
+	input := ">=2.1 < 4.0.0 "
+	expected := ">=2.1 <4.0.0"
+	assert.Equal(t, expected, normalizeRangeString(input))
+
+	input = ">= 4.1.4 < 5"
+	expected = ">=4.1.4 <5"
+	assert.Equal(t, expected, normalizeRangeString(input))
+}
+
+func Test_isVersionLess(t *testing.T) {
+	range1, _ := semver.NewRange([]byte("*"))
+	range2, _ := semver.NewRange([]byte(max_range))
+	assert.Equal(t, true, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte("*"))
+	range2, _ = semver.NewRange([]byte("<1.0.0"))
+	assert.Equal(t, true, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte("1.0.0"))
+	range2, _ = semver.NewRange([]byte("<1.0.0"))
+	assert.Equal(t, false, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	range2, _ = semver.NewRange([]byte(max_range))
+	assert.Equal(t, false, isRangeLower(range1, range2))
+	range1, _ = semver.NewRange([]byte(max_range))
+	range2, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	assert.Equal(t, false, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	range2, _ = semver.NewRange([]byte("=<1.0.0"))
+	assert.Equal(t, false, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	range2, _ = semver.NewRange([]byte(">2.0.0 <3.0.0"))
+	assert.Equal(t, true, isRangeLower(range1, range2))
 }
