@@ -61,7 +61,7 @@ func run(args []string) error {
 	}
 
 	repoChan := make(chan repoIterChan)
-	cloneWg := sync.WaitGroup{}
+	cloneWg := &sync.WaitGroup{}
 	go cloneRepos(repos, repoChan, cloneWg)
 
 	testDirs := make([]string, 0)
@@ -263,7 +263,7 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	return &vtpj, nil
 }
 
-func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg sync.WaitGroup) {
+func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg *sync.WaitGroup) {
 	for _, repo := range repos {
 		wg.Add(1)
 		if repo.repoDir != "" {
@@ -290,7 +290,7 @@ func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg sync.WaitGroup) {
 	close(repoChan)
 }
 
-func cloneRepo(repo string, branch string, wg sync.WaitGroup) (string, error) {
+func cloneRepo(repo string, branch string, wg *sync.WaitGroup) (string, error) {
 	defer wg.Done()
 	repoDir, err := os.MkdirTemp("", "newrelic")
 	if err != nil {

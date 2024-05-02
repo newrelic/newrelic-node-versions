@@ -4,9 +4,17 @@
 version: "3"
 
 tasks:
+  build:
+    cmds:
+      - go build ./...
+    sources:
+      - "**/*.go"
+
   lint:
     cmds:
       - golangci-lint run ./...
+    sources:
+      - "**/*.go"
 
   test:
     cmds:

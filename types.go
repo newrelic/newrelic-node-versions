@@ -176,13 +176,14 @@ func (db *DependencyBlock) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to decode dependency block: %w", err)
 	}
 
-	samples := []byte(*decoded["samples"])
+	samples := decoded["samples"]
 	if samples != nil {
-		if bytes.Compare(samples[0:1], []byte(`"`)) == 0 {
-			strSamples := string(samples[1 : len(samples)-1])
+		samplesBytes := []byte(*samples)
+		if bytes.Compare(samplesBytes[0:1], []byte(`"`)) == 0 {
+			strSamples := string(samplesBytes[1 : len(samplesBytes)-1])
 			db.Samples = cast.ToInt(strSamples)
 		} else {
-			db.Samples = cast.ToInt(string(samples))
+			db.Samples = cast.ToInt(string(samplesBytes))
 		}
 	}
 

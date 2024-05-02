@@ -19,6 +19,12 @@ const complicatedDependencyBlock = `{
 	"bar": "2.0.0"
 }`
 
+const onlyVersionsInBlock = `{
+	"foo": {
+		"versions": "1.2.3"
+	}
+}`
+
 func Test_DependenciesBlock(t *testing.T) {
 	t.Run("unmarshals basic block", func(t *testing.T) {
 		var block DependenciesBlock
@@ -38,6 +44,16 @@ func Test_DependenciesBlock(t *testing.T) {
 		expected := DependenciesBlock{
 			"foo": DependencyBlock{Versions: "^2.0.0", Samples: 2},
 			"bar": DependencyBlock{Versions: "2.0.0"},
+		}
+		assert.Equal(t, expected, block)
+	})
+
+	t.Run("unmarshals block with only versions", func(t *testing.T) {
+		var block DependenciesBlock
+		err := json.Unmarshal([]byte(onlyVersionsInBlock), &block)
+		assert.Nil(t, err)
+		expected := DependenciesBlock{
+			"foo": DependencyBlock{Versions: "1.2.3"},
 		}
 		assert.Equal(t, expected, block)
 	})
