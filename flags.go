@@ -100,6 +100,8 @@ type StringEnumValue struct {
 	value   string
 }
 
+// NewStringEnumValue creates a new [StringEnumValue] with a defined set of
+// allowed values and a sets the initial value to a default value (`def`).
 func NewStringEnumValue(allowed []string, def string) *StringEnumValue {
 	return &StringEnumValue{
 		allowed: allowed,

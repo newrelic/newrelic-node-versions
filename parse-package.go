@@ -22,6 +22,11 @@ type PkgInfo struct {
 	MinAgentVersion string
 }
 
+// parsePackage parses a versioned test `package.json` into the components
+// required for the target's inclusion in the compatibility list. Which is
+// to say, it pulls out the target module name, the minimum supported version
+// of that module, and the minimum version of the agent that supports the
+// module.
 func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 	var lastVersion *semver.Range
 	targets := pkg.Targets
@@ -41,37 +46,20 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 					continue
 				}
 
+				var currentVersion semver.Range
+
 				// The semver library does not parse strings like `>1.0.0 <2.0.0 || >3.0.0`.
 				// So we need to split it up and normalize the pieces into range strings
 				// it can understand.
-				var currentVersion semver.Range
 				rangeStrings := strings.Split(val.Versions, "||")
 				for k, v := range rangeStrings {
 					// Oh, Go, why no slices.Map?
 					rangeStrings[k] = normalizeRangeString(v)
 				}
 
-				if len(rangeStrings) == 1 {
-					r, err := semver.NewRange([]byte(rangeStrings[0]))
-					if err != nil {
-						return nil, fmt.Errorf("failed to parse version string `%s` (from `%s`) for `%s`: %w", rangeStrings[0], val.Versions, targets, err)
-					}
-					currentVersion = r
-				} else {
-					ranges := make([]semver.Range, 0)
-					for _, rangeString := range rangeStrings {
-						r, err := semver.NewRange([]byte(rangeString))
-						if err != nil {
-							return nil, fmt.Errorf("failed to parse version string `%s` (from `%s`) for `%s`: %w", rangeString, val.Versions, targets, err)
-						}
-						ranges = append(ranges, r)
-					}
-					currentVersion = ranges[0]
-					for _, r := range ranges[1:] {
-						if isRangeLower(r, currentVersion) == true {
-							currentVersion = r
-						}
-					}
+				currentVersion, err := processRangeStrings(rangeStrings)
+				if err != nil {
+					return nil, fmt.Errorf("`%s` => `%s`: %w", target, val.Versions, err)
 				}
 
 				if lastVersion == nil {
@@ -105,6 +93,40 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 	}
 
 	return results, nil
+}
+
+// processRangeStrings iterates a slice of semver range strings and returns
+// the range with the lowest minimum version. The provided range strings
+// should be normalized.
+func processRangeStrings(rangeStrings []string) (semver.Range, error) {
+	var result semver.Range
+
+	if len(rangeStrings) == 1 {
+		r, err := semver.NewRange([]byte(rangeStrings[0]))
+		if err != nil {
+			return result, fmt.Errorf("failed to parse version string `%s`: %w", rangeStrings[0], err)
+		}
+		result = r
+		return result, nil
+	}
+
+	ranges := make([]semver.Range, 0)
+	for _, rangeString := range rangeStrings {
+		r, err := semver.NewRange([]byte(rangeString))
+		if err != nil {
+			return result, fmt.Errorf("failed to parse version string `%s`: %w", rangeString, err)
+		}
+		ranges = append(ranges, r)
+	}
+
+	result = ranges[0]
+	for _, r := range ranges[1:] {
+		if isRangeLower(r, result) == true {
+			result = r
+		}
+	}
+
+	return result, nil
 }
 
 // normalizeRangeString massages range strings into a format that the

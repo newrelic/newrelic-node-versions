@@ -10,6 +10,7 @@ import (
 
 type NpmClient struct {
 	baseUrl string
+	http    *http.Client
 }
 
 type NpmPackage struct {
@@ -32,6 +33,7 @@ type NpmClientOption func(*NpmClient)
 func NewNpmClient(options ...NpmClientOption) *NpmClient {
 	client := &NpmClient{
 		baseUrl: "https://registry.npmjs.com",
+		http:    http.DefaultClient,
 	}
 
 	for _, opt := range options {
@@ -50,6 +52,12 @@ func WithBaseUrl(url string) NpmClientOption {
 	}
 }
 
+func WithHttpClient(c *http.Client) NpmClientOption {
+	return func(client *NpmClient) {
+		client.http = c
+	}
+}
+
 // GetDetailedInfo gets the full detailed information about a package from the
 // NPM registry.
 func (nc *NpmClient) GetDetailedInfo(packageName string) (*NpmDetailedPackage, error) {
@@ -62,11 +70,15 @@ func (nc *NpmClient) GetDetailedInfo(packageName string) (*NpmDetailedPackage, e
 		return nil, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := nc.http.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("expected response code 200 but got %d: %s", res.StatusCode, res.Status)
+	}
 
 	var body NpmDetailedPackage
 	err = json.NewDecoder(res.Body).Decode(&body)
@@ -88,11 +100,15 @@ func (nc *NpmClient) GetLatest(packageName string) (string, error) {
 		return "", err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := nc.http.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("expected response code 200 but got %d: %s", res.StatusCode, res.Status)
+	}
 
 	var body NpmPackage
 	err = json.NewDecoder(res.Body).Decode(&body)
