@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-
 	"github.com/spf13/cast"
 )
 
@@ -69,10 +68,7 @@ func (td *TestDescription) UnmarshalJSON(data []byte) error {
 	}
 
 	var rawObj map[string]*json.RawMessage
-	err := json.Unmarshal(data, &rawObj)
-	if err != nil {
-		return err
-	}
+	_ = json.Unmarshal(data, &rawObj)
 
 	*td = TestDescription{
 		Supported: true,
@@ -88,28 +84,28 @@ func (td *TestDescription) UnmarshalJSON(data []byte) error {
 			}
 		case "comment":
 			var comment string
-			err = json.Unmarshal(*val, &comment)
+			err := json.Unmarshal(*val, &comment)
 			if err != nil {
 				return err
 			}
 			td.Comment = comment
 		case "engines":
 			var engines EnginesBlock
-			err = json.Unmarshal(*val, &engines)
+			err := json.Unmarshal(*val, &engines)
 			if err != nil {
 				return err
 			}
 			td.Engines = engines
 		case "dependencies":
 			var deps DependenciesBlock
-			err = json.Unmarshal(*val, &deps)
+			err := json.Unmarshal(*val, &deps)
 			if err != nil {
 				return err
 			}
 			td.Dependencies = deps
 		case "files":
 			var files FilesBlock
-			err = json.Unmarshal(*val, &files)
+			err := json.Unmarshal(*val, &files)
 			if err != nil {
 				return err
 			}
@@ -171,10 +167,7 @@ func (db *DependencyBlock) UnmarshalJSON(data []byte) error {
 	}
 
 	var decoded map[string]*json.RawMessage
-	err := json.Unmarshal(data, &decoded)
-	if err != nil {
-		return fmt.Errorf("failed to decode dependency block: %w", err)
-	}
+	_ = json.Unmarshal(data, &decoded)
 
 	samples := decoded["samples"]
 	if samples != nil {
@@ -187,7 +180,11 @@ func (db *DependencyBlock) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	strVersions := string(*decoded["versions"])
+	versions := decoded["versions"]
+	if versions == nil {
+		return fmt.Errorf("missing versions property: %s", data)
+	}
+	strVersions := string(*versions)
 	db.Versions = strVersions[1 : len(strVersions)-1]
 
 	return nil

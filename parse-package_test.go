@@ -79,6 +79,39 @@ func Test_ParsePackage(t *testing.T) {
 	})
 }
 
+func Test_processRangeStrings(t *testing.T) {
+	t.Run("errors for single invalid range", func(t *testing.T) {
+		result, err := processRangeStrings([]string{"> 1.0.0 "})
+		assert.Empty(t, result)
+		assert.ErrorContains(t, err, "failed to parse version string `> 1.0.0 `")
+	})
+
+	t.Run("errors for invalid range in multiple ranges", func(t *testing.T) {
+		result, err := processRangeStrings([]string{
+			">1.0.0",
+			" < 3.0.0 ",
+		})
+		assert.Empty(t, result)
+		assert.ErrorContains(t, err, "failed to parse version string ` < 3.0.0 `")
+	})
+
+	t.Run("processes a single range string", func(t *testing.T) {
+		result, err := processRangeStrings([]string{">1.0.0"})
+		assert.Nil(t, err)
+		assert.Equal(t, "1.0.0", result.GetLowerBoundary().String())
+	})
+
+	t.Run("processes multiple strings and returns the correct one", func(t *testing.T) {
+		result, err := processRangeStrings([]string{
+			">1.0.0",
+			">0.1.0 <1.0.0",
+			">3.0.0",
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, "0.1.0", result.GetLowerBoundary().String())
+	})
+}
+
 func Test_normalizeRangeString(t *testing.T) {
 	input := ">=2.1 < 4.0.0 "
 	expected := ">=2.1 <4.0.0"
@@ -107,6 +140,10 @@ func Test_isVersionLess(t *testing.T) {
 	assert.Equal(t, false, isRangeLower(range1, range2))
 	range1, _ = semver.NewRange([]byte(max_range))
 	range2, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	assert.Equal(t, false, isRangeLower(range1, range2))
+
+	range1, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
+	range2, _ = semver.NewRange([]byte("*"))
 	assert.Equal(t, false, isRangeLower(range1, range2))
 
 	range1, _ = semver.NewRange([]byte(">=0.1.0 <1.0.0"))
