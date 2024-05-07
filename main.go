@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dusted-go/logging/prettylog"
+	"github.com/spf13/afero"
 	"io"
 	"log/slog"
 	"os"
@@ -25,6 +27,8 @@ var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-s
 var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`}
 
 var columHeaders = map[string]string{"Name": `Package Name`, "MinSupportedVersion": `Minimum Supported Version`, "LatestVersion": `Latest Supported Version`, "MinAgentVersion": `Minimum Agent Version*`}
+
+var appFS = afero.NewOsFs()
 
 func main() {
 	err := run(os.Args)
@@ -60,84 +64,31 @@ func run(args []string) error {
 		repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
 	}
 
-	repoChan := make(chan repoIterChan)
-	cloneWg := &sync.WaitGroup{}
-	cloneRepos(repos, repoChan, cloneWg)
-	go func() {
-		cloneWg.Wait()
-		close(repoChan)
-	}()
+	logger.Info("cloning repositories")
+	cloneResults := cloneRepos(repos, logger)
+	logger.Info("repository cloning complete")
 
 	testDirs := make([]string, 0)
-	data := make([]ReleaseData, 0)
-	for repo := range repoChan {
-		if repo.err != nil {
-			logger.Error(repo.err.Error())
+	for _, cloneResult := range cloneResults {
+		if cloneResult.Error != nil {
+			logger.Error(cloneResult.Error.Error())
 			continue
 		}
-		var repoDir = repo.repoDir
-		var testDir = repo.testPath
-		versionedTestsDir := filepath.Join(repoDir, testDir)
-		fmt.Println("Adding test dir")
+
+		versionedTestsDir := filepath.Join(cloneResult.Directory, cloneResult.TestDirectory)
+		logger.Debug("adding test dir", "dir", versionedTestsDir)
 		testDirs = append(testDirs, versionedTestsDir)
 	}
 
-	wg := sync.WaitGroup{}
-	logger.Debug("Processing data ...")
+	logger.Info("processing data")
+	data := processVersionedTestDirs(testDirs, logger)
+	logger.Info("data processing complete")
 
-	for _, versionedTestsDir := range testDirs {
-		iterChan := make(chan dirIterChan)
-		go iterateTestDir(versionedTestsDir, iterChan)
-
-		npm := NewNpmClient()
-		for result := range iterChan {
-			if result.err != nil {
-				logger.Error(result.err.Error())
-				continue
-			}
-
-			pkgInfos, err := parsePackage(result.pkg)
-			if err != nil {
-				if errors.Is(err, ErrTargetMissing) {
-					logger.Debug(err.Error())
-					continue
-				}
-				return err
-			}
-
-			// TODO: handle errors better. Probably refactor into something like the dirIter goroutine
-			for _, info := range pkgInfos {
-				wg.Add(1)
-				go func(info PkgInfo) {
-					defer wg.Done()
-					logger.Debug("getting detailed package info", "package", info.Name)
-					releaseData, err := buildReleaseData(info, npm)
-					if err != nil {
-						logger.Error(err.Error())
-						return
-					}
-					data = append(data, *releaseData)
-				}(info)
-			}
-		}
+	for _, cloneResult := range cloneResults {
+		os.RemoveAll(cloneResult.Directory)
 	}
 
-	wg.Wait()
-	for repo := range repoChan {
-		os.RemoveAll(repo.repoDir)
-	}
-
-	slices.SortFunc(data, func(a ReleaseData, b ReleaseData) int {
-		if a.Name == b.Name {
-			return 0
-		}
-		switch a.Name > b.Name {
-		case true:
-			return 1
-		default:
-			return -1
-		}
-	})
+	slices.SortFunc(data, releaseDataSorter)
 	prunedData := pruneData(data)
 	switch flags.outputFormat.String() {
 	default:
@@ -151,22 +102,69 @@ func run(args []string) error {
 	return nil
 }
 
-func buildLogger(verbose bool) *slog.Logger {
-	if verbose == true {
-		return slog.New(
-			// TODO: replace with https://github.com/dusted-go/logging/issues/3
-			slog.NewTextHandler(
-				os.Stderr,
-				&slog.HandlerOptions{Level: slog.LevelDebug},
-			),
-		)
+// processVersionedTestDirs iterates through all versioned test directories,
+// looking for versioned `package.json` files, and processes what it finds
+// into release data for each found supported module.
+func processVersionedTestDirs(testDirs []string, logger *slog.Logger) []ReleaseData {
+	wg := sync.WaitGroup{}
+	results := make([]ReleaseData, 0)
+
+	for _, versionedTestsDir := range testDirs {
+		iterChan := make(chan dirIterChan)
+		go iterateTestDir(versionedTestsDir, iterChan)
+
+		npm := NewNpmClient(WithLogger(logger))
+		for result := range iterChan {
+			if result.err != nil {
+				logger.Error(result.err.Error())
+				continue
+			}
+
+			pkgInfos, err := parsePackage(result.pkg)
+			if err != nil {
+				if errors.Is(err, ErrTargetMissing) {
+					logger.Debug(err.Error())
+					continue
+				}
+
+				// TODO: this was a hard exit. How should we handle catastrophic errors?
+				logger.Error(err.Error())
+				continue
+			}
+
+			for _, info := range pkgInfos {
+				wg.Add(1)
+				go func(info PkgInfo) {
+					defer wg.Done()
+					releaseData, err := buildReleaseData(info, npm)
+					if err != nil {
+						logger.Error(err.Error())
+						return
+					}
+					results = append(results, *releaseData)
+				}(info)
+			}
+		}
 	}
-	return slog.New(
-		slog.NewTextHandler(
-			os.Stderr,
-			&slog.HandlerOptions{Level: slog.LevelError},
-		),
+
+	wg.Wait()
+	return results
+}
+
+func buildLogger(verbose bool) *slog.Logger {
+	dest := prettylog.WithDestinationWriter(os.Stderr)
+	level := slog.LevelInfo
+
+	if verbose == true {
+		level = slog.LevelDebug
+	}
+
+	handler := prettylog.New(
+		&slog.HandlerOptions{Level: level},
+		dest,
 	)
+
+	return slog.New(handler)
 }
 
 func buildReleaseData(info PkgInfo, npm *NpmClient) (*ReleaseData, error) {
@@ -252,7 +250,8 @@ func iterateTestDir(dir string, iterChan chan dirIterChan) {
 	close(iterChan)
 }
 
-func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
+// readPackageJson reads a file as a versioned `package.json`.
+func readPackageJson(pkgJsonFile io.Reader) (*VersionedTestPackageJson, error) {
 	data, err := io.ReadAll(pkgJsonFile)
 	if err != nil {
 		return nil, err
@@ -267,47 +266,70 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 	return &vtpj, nil
 }
 
-func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg *sync.WaitGroup) {
+// cloneRepos clones multiple repositories at once but does not return until
+// all repositories have been cloned.
+func cloneRepos(repos []nrRepo, logger *slog.Logger) []CloneRepoResult {
+	wg := sync.WaitGroup{}
+	result := make([]CloneRepoResult, 0)
 	for _, repo := range repos {
 		wg.Add(1)
-		go cloneRepo(repo, wg, repoChan)
+		go func(r nrRepo) {
+			defer wg.Done()
+			cloneResult := cloneRepo(r, logger)
+			result = append(result, cloneResult)
+		}(repo)
 	}
+	wg.Wait()
+	return result
 }
 
-func cloneRepo(repo nrRepo, wg *sync.WaitGroup, repoChan chan repoIterChan) {
-	defer wg.Done()
+// cloneRepo clones a remote repository. If a local directory is specified
+// in the repo description, then cloning is skipped and only a result object
+// is returned.
+func cloneRepo(repo nrRepo, logger *slog.Logger) CloneRepoResult {
 	if repo.repoDir != "" {
-		repoChan <- repoIterChan{
-			repoDir:  repo.repoDir,
-			testPath: repo.testPath,
+		return CloneRepoResult{
+			Directory:     repo.repoDir,
+			TestDirectory: repo.testPath,
 		}
-		return
 	}
 
-	repoDir, err := os.MkdirTemp("", "newrelic")
+	repoDir, err := afero.TempDir(appFS, "", "newrelic")
 	if err != nil {
-		repoChan <- repoIterChan{
-			err: fmt.Errorf("failed to create temporary directory: %w", err),
+		return CloneRepoResult{
+			Error: fmt.Errorf("failed to create temporary directory: %w", err),
 		}
-		return
 	}
 
-	fmt.Println("Cloning repository ...")
+	logger.Debug("cloning repo", "url", repo.url)
 	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
 		URL:           repo.url,
 		ReferenceName: plumbing.ReferenceName(repo.branch),
 		Depth:         1,
 	})
 	if err != nil {
-		repoChan <- repoIterChan{
-			err: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
+		return CloneRepoResult{
+			Error: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
 		}
-		return
 	}
 
-	repoChan <- repoIterChan{
-		repoDir:  repoDir,
-		testPath: repo.testPath,
+	return CloneRepoResult{
+		Directory:     repoDir,
+		TestDirectory: repo.testPath,
+	}
+}
+
+// releaseDataSorter is a sorting function for [ReleaseData]. It is meant to
+// be used by [slices.SortFunc].
+func releaseDataSorter(a ReleaseData, b ReleaseData) int {
+	if a.Name == b.Name {
+		return 0
+	}
+	switch a.Name > b.Name {
+	case true:
+		return 1
+	default:
+		return -1
 	}
 }
 
@@ -352,6 +374,10 @@ func renderAsAscii(data []ReleaseData, writer io.Writer) {
 	io.WriteString(writer, outputTable.Render())
 }
 
+// renderAsMarkdown renders the collected data as a Markdown table. This is
+// intended to be used when generating output to be embedded in one of docs
+// locations (or maybe to be fed into pandoc to generate a PDF in order to
+// email it to a customer).
 func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
 	outputTable := releaseDataToTable(data)
 	io.WriteString(
@@ -376,6 +402,8 @@ func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
 	)
 }
 
+// releaseDataToTable builds the tabular data structure from the discovered
+// supported modules data.
 func releaseDataToTable(data []ReleaseData) table.Writer {
 	outputTable := table.NewWriter()
 

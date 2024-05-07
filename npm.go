@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jsumners/go-rfc3339"
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 )
 
 type NpmClient struct {
 	baseUrl string
+	log     *slog.Logger
 	http    *http.Client
 }
 
@@ -34,6 +37,7 @@ func NewNpmClient(options ...NpmClientOption) *NpmClient {
 	client := &NpmClient{
 		baseUrl: "https://registry.npmjs.com",
 		http:    http.DefaultClient,
+		log:     slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 
 	for _, opt := range options {
@@ -58,9 +62,16 @@ func WithHttpClient(c *http.Client) NpmClientOption {
 	}
 }
 
+func WithLogger(logger *slog.Logger) NpmClientOption {
+	return func(client *NpmClient) {
+		client.log = logger
+	}
+}
+
 // GetDetailedInfo gets the full detailed information about a package from the
 // NPM registry.
 func (nc *NpmClient) GetDetailedInfo(packageName string) (*NpmDetailedPackage, error) {
+	nc.log.Debug("getting detailed info for " + packageName)
 	req, err := http.NewRequest(
 		http.MethodGet,
 		fmt.Sprintf("%s/%s", nc.baseUrl, packageName),
@@ -91,6 +102,7 @@ func (nc *NpmClient) GetDetailedInfo(packageName string) (*NpmDetailedPackage, e
 
 // GetLatest retrieves the latest version string for the given package.
 func (nc *NpmClient) GetLatest(packageName string) (string, error) {
+	nc.log.Debug("getting latest version for " + packageName)
 	req, err := http.NewRequest(
 		http.MethodGet,
 		fmt.Sprintf("%s/%s/latest", nc.baseUrl, packageName),
