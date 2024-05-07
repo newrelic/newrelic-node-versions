@@ -62,7 +62,11 @@ func run(args []string) error {
 
 	repoChan := make(chan repoIterChan)
 	cloneWg := &sync.WaitGroup{}
-	go cloneRepos(repos, repoChan, cloneWg)
+	cloneRepos(repos, repoChan, cloneWg)
+	go func() {
+		cloneWg.Wait()
+		close(repoChan)
+	}()
 
 	testDirs := make([]string, 0)
 	data := make([]ReleaseData, 0)
@@ -74,9 +78,9 @@ func run(args []string) error {
 		var repoDir = repo.repoDir
 		var testDir = repo.testPath
 		versionedTestsDir := filepath.Join(repoDir, testDir)
+		fmt.Println("Adding test dir")
 		testDirs = append(testDirs, versionedTestsDir)
 	}
-	cloneWg.Wait()
 
 	wg := sync.WaitGroup{}
 	logger.Debug("Processing data ...")
@@ -266,48 +270,45 @@ func readPackageJson(pkgJsonFile *os.File) (*VersionedTestPackageJson, error) {
 func cloneRepos(repos []nrRepo, repoChan chan repoIterChan, wg *sync.WaitGroup) {
 	for _, repo := range repos {
 		wg.Add(1)
-		if repo.repoDir != "" {
-			repoChan <- repoIterChan{
-				repoDir:  repo.repoDir,
-				testPath: repo.testPath,
-			}
-			continue
-		}
-
-		repoDir, err := cloneRepo(repo.url, repo.branch, wg)
-		if err != nil {
-			repoChan <- repoIterChan{
-				err: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
-			}
-		}
-
-		repoChan <- repoIterChan{
-			repoDir:  repoDir,
-			testPath: repo.testPath,
-		}
+		go cloneRepo(repo, wg, repoChan)
 	}
-
-	close(repoChan)
 }
 
-func cloneRepo(repo string, branch string, wg *sync.WaitGroup) (string, error) {
+func cloneRepo(repo nrRepo, wg *sync.WaitGroup, repoChan chan repoIterChan) {
 	defer wg.Done()
+	if repo.repoDir != "" {
+		repoChan <- repoIterChan{
+			repoDir:  repo.repoDir,
+			testPath: repo.testPath,
+		}
+		return
+	}
+
 	repoDir, err := os.MkdirTemp("", "newrelic")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+		repoChan <- repoIterChan{
+			err: fmt.Errorf("failed to create temporary directory: %w", err),
+		}
+		return
 	}
 
 	fmt.Println("Cloning repository ...")
 	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL:           repo,
-		ReferenceName: plumbing.ReferenceName(branch),
+		URL:           repo.url,
+		ReferenceName: plumbing.ReferenceName(repo.branch),
 		Depth:         1,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to clone newrelic repo: %w", err)
+		repoChan <- repoIterChan{
+			err: fmt.Errorf("failed to clone repo `%s`: %w", repo.url, err),
+		}
+		return
 	}
 
-	return repoDir, nil
+	repoChan <- repoIterChan{
+		repoDir:  repoDir,
+		testPath: repo.testPath,
+	}
 }
 
 // pruneData removes duplicate entries from the data set. A duplicate entry
