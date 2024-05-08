@@ -9,6 +9,7 @@ import (
 )
 
 type appFlags struct {
+	noExternals  bool
 	outputFormat *StringEnumValue
 	repoDir      string
 	testDir      string
@@ -31,6 +32,19 @@ func createAndParseFlags(args []string) error {
 		printUsage(fs.FlagUsages())
 	}
 
+	fs.BoolVarP(
+		&flags.noExternals,
+		"no-externals",
+		"n",
+		false,
+		heredoc.Doc(`
+			Disable cloning and processing of external repos. An external repo is
+			one that provides extra functionality to the "newrelic" module. This
+			allows processing a single repo with --repo-dir. The default, i.e. not
+			supplying this flag, is to process all known external repos.
+		`),
+	)
+
 	flags.outputFormat = NewStringEnumValue(
 		[]string{"ascii", "markdown"},
 		"markdown",
@@ -51,10 +65,22 @@ func createAndParseFlags(args []string) error {
 		"r",
 		"",
 		heredoc.Doc(`
-			Specify a local directory that contains a Node.js agent repo.
-			If not provided, the default GitHub repositories will be cloned to a local temporary
-			directory and that will be used.
+			Specify a local directory that contains a Node.js instrumentation repo.
+			If not provided, the main agent GitHub repository will be cloned to a
+			local temporary directory and that will be used.
 		`),
+	)
+
+	fs.StringVarP(
+		&flags.testDir,
+		"test-dir",
+		"t",
+		"",
+		heredoc.Doc(`
+      Specify the test directory to parse the package.json files.
+      If not provided, it will default to 'test/versioned'. This applies to
+			the repo provided by the --repo-dir flag.
+    `),
 	)
 
 	fs.BoolVarP(
@@ -67,17 +93,6 @@ func createAndParseFlags(args []string) error {
 			logs will be written to stderr that should give indicators of what
 			is happening.
 		`),
-	)
-
-	fs.StringVarP(
-		&flags.testDir,
-		"test-dir",
-		"t",
-		"",
-		heredoc.Doc(`
-      Specify the test directory to parse the package.json files.
-      If not provided, it will default to 'test/versioned'.
-    `),
 	)
 
 	// TODO: add flags for generating different formats:

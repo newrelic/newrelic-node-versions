@@ -35,6 +35,38 @@ func (er *errorReader) Read([]byte) (int, error) {
 	return 0, errors.New("boom")
 }
 
+func Test_cleanupTempDirs(t *testing.T) {
+	origFS := appFS
+	t.Cleanup(func() {
+		appFS = origFS
+	})
+
+	appFS = afero.NewMemMapFs()
+	appFS.Mkdir("/foo", os.ModePerm)
+	appFS.Mkdir("/bar", os.ModePerm)
+	appFS.Mkdir("/baz", os.ModePerm)
+
+	collector := &logCollector{}
+	logger := slog.New(slog.NewTextHandler(collector, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	cloneResults := []CloneRepoResult{
+		{Directory: "/foo", Remove: false},
+		{Directory: "/bar", Remove: true},
+		{Directory: "/baz", Remove: true},
+	}
+	cleanupTempDirs(cloneResults, logger)
+	assert.Equal(t, 3, len(collector.logs))
+	assert.Contains(t, collector.logs[0], "not removing directory /foo")
+	assert.Contains(t, collector.logs[1], "removing directory /bar")
+	assert.Contains(t, collector.logs[2], "removing directory /baz")
+
+	exists, _ := afero.Exists(appFS, "/foo")
+	assert.Equal(t, true, exists)
+	exists, _ = afero.Exists(appFS, "/bar")
+	assert.Equal(t, false, exists)
+	exists, _ = afero.Exists(appFS, "/baz")
+	assert.Equal(t, false, exists)
+}
+
 func Test_buildLogger(t *testing.T) {
 	t.Run("returns debug level logger", func(t *testing.T) {
 		logger := buildLogger(true)

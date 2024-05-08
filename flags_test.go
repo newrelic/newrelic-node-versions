@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func Test_createAndParseFlags(t *testing.T) {
+	t.Run("defaults are as expected", func(t *testing.T) {
+		err := createAndParseFlags([]string{"ignored"})
+		expected := appFlags{
+			noExternals: false,
+			outputFormat: &StringEnumValue{
+				allowed: []string{"ascii", "markdown"},
+				value:   "markdown",
+			},
+		}
+		assert.Nil(t, err)
+		assert.Equal(t, expected, flags)
+	})
+}
+
 func Test_StringEnumValue(t *testing.T) {
 	t.Run("only allows specified values", func(t *testing.T) {
 		sev := NewStringEnumValue([]string{"foo", "bar"}, "foo")
