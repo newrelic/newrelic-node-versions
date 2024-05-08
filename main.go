@@ -23,10 +23,17 @@ import (
 )
 
 var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, branch: `main`, testPath: `test/versioned`}
-var apolloRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`}
-var nextRepo = nrRepo{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`}
+var externalsRepos = []nrRepo{
+	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
+	{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`},
+}
 
-var columHeaders = map[string]string{"Name": `Package Name`, "MinSupportedVersion": `Minimum Supported Version`, "LatestVersion": `Latest Supported Version`, "MinAgentVersion": `Minimum Agent Version*`}
+var columHeaders = map[string]string{
+	"Name":                `Package Name`,
+	"MinSupportedVersion": `Minimum Supported Version`,
+	"LatestVersion":       `Latest Supported Version`,
+	"MinAgentVersion":     `Minimum Agent Version*`,
+}
 
 var appFS = afero.NewOsFs()
 
@@ -61,7 +68,11 @@ func run(args []string) error {
 		var testRepo = nrRepo{repoDir: repoDir, testPath: testDir}
 		repos = []nrRepo{testRepo}
 	} else {
-		repos = []nrRepo{agentRepo, apolloRepo, nextRepo}
+		repos = []nrRepo{agentRepo}
+	}
+
+	if flags.noExternals == false {
+		repos = append(repos, externalsRepos...)
 	}
 
 	logger.Info("cloning repositories")
@@ -84,9 +95,7 @@ func run(args []string) error {
 	data := processVersionedTestDirs(testDirs, logger)
 	logger.Info("data processing complete")
 
-	for _, cloneResult := range cloneResults {
-		os.RemoveAll(cloneResult.Directory)
-	}
+	cleanupTempDirs(cloneResults, logger)
 
 	slices.SortFunc(data, releaseDataSorter)
 	prunedData := pruneData(data)
@@ -100,6 +109,19 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+// cleanupTempDirs removes any temporary directories marked for removal that
+// were created during cloning.
+func cleanupTempDirs(cloneResults []CloneRepoResult, logger *slog.Logger) {
+	for _, cloneResult := range cloneResults {
+		if cloneResult.Remove == false {
+			logger.Debug("not removing directory " + cloneResult.Directory)
+			continue
+		}
+		logger.Debug("removing directory " + cloneResult.Directory)
+		_ = appFS.RemoveAll(cloneResult.Directory)
+	}
 }
 
 // processVersionedTestDirs iterates through all versioned test directories,
@@ -291,6 +313,7 @@ func cloneRepo(repo nrRepo, logger *slog.Logger) CloneRepoResult {
 		return CloneRepoResult{
 			Directory:     repo.repoDir,
 			TestDirectory: repo.testPath,
+			Remove:        false,
 		}
 	}
 
@@ -316,6 +339,7 @@ func cloneRepo(repo nrRepo, logger *slog.Logger) CloneRepoResult {
 	return CloneRepoResult{
 		Directory:     repoDir,
 		TestDirectory: repo.testPath,
+		Remove:        true,
 	}
 }
 

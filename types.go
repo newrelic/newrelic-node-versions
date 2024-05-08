@@ -20,12 +20,6 @@ type dirIterChan struct {
 	err  error
 }
 
-type repoIterChan struct {
-	repoDir  string
-	testPath string
-	err      error
-}
-
 // CloneRepoResult represents the status of Git repository clone operation.
 type CloneRepoResult struct {
 	// Directory is the path on the file system that contains the cloned
@@ -35,6 +29,10 @@ type CloneRepoResult struct {
 	// TestDirectory is a string relative to Directory that contains the
 	// versioned tests for the repository.
 	TestDirectory string
+
+	// Remove indicates if the Directory should be removed after all data
+	// processing has completed.
+	Remove bool
 
 	// Error indicates if there was some problem during the clone operation.
 	// Should be `nil` for success results.
