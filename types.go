@@ -26,6 +26,21 @@ type repoIterChan struct {
 	err      error
 }
 
+// CloneRepoResult represents the status of Git repository clone operation.
+type CloneRepoResult struct {
+	// Directory is the path on the file system that contains the cloned
+	// repository.
+	Directory string
+
+	// TestDirectory is a string relative to Directory that contains the
+	// versioned tests for the repository.
+	TestDirectory string
+
+	// Error indicates if there was some problem during the clone operation.
+	// Should be `nil` for success results.
+	Error error
+}
+
 // ReleaseData represents a row of information about a package. Specifically,
 // it's the final computed information to be rendered into documents.
 type ReleaseData struct {
