@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 
 	"blitznote.com/src/semver/v3"
@@ -32,7 +33,7 @@ var columHeaders = map[string]string{
 	"Name":                `Package Name`,
 	"MinSupportedVersion": `Minimum Supported Version`,
 	"LatestVersion":       `Latest Supported Version`,
-	"MinAgentVersion":     `Minimum Agent Version*`,
+	"MinAgentVersion":     `Introduced In*`,
 }
 
 var appFS = afero.NewOsFs()
@@ -97,16 +98,33 @@ func run(args []string) error {
 
 	cleanupTempDirs(cloneResults, logger)
 
+	var writeDest io.Writer
+	if flags.replaceInFile != "" {
+		writeDest = &strings.Builder{}
+	} else {
+		writeDest = os.Stdout
+	}
+
 	slices.SortFunc(data, releaseDataSorter)
 	prunedData := pruneData(data)
 	switch flags.outputFormat.String() {
 	default:
-		renderAsAscii(prunedData, os.Stdout)
+		renderAsAscii(prunedData, writeDest)
 	case "ascii":
-		renderAsAscii(prunedData, os.Stdout)
+		renderAsAscii(prunedData, writeDest)
 	case "markdown":
-		renderAsMarkdown(prunedData, os.Stdout)
+		renderAsMarkdown(prunedData, writeDest)
 	}
+
+	if flags.replaceInFile != "" {
+		content := writeDest.(*strings.Builder).String()
+		err = ReplaceInFile(flags.replaceInFile, content, flags.startMarker, flags.endMarker)
+		if err != nil {
+			return err
+		}
+	}
+
+	logger.Info("done")
 
 	return nil
 }
