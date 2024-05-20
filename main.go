@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 
+	_ "embed"
+
 	"blitznote.com/src/semver/v3"
 	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/go-git/go-git/v5"
@@ -23,6 +25,9 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+//go:embed tmpl/preamble.md
+var docPreamble string
+
 var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, branch: `main`, testPath: `test/versioned`}
 var externalsRepos = []nrRepo{
 	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
@@ -30,10 +35,10 @@ var externalsRepos = []nrRepo{
 }
 
 var columHeaders = map[string]string{
-	"Name":                `Package Name`,
-	"MinSupportedVersion": `Minimum Supported Version`,
-	"LatestVersion":       `Latest Supported Version`,
-	"MinAgentVersion":     `Introduced In*`,
+	"Name":                `Package name`,
+	"MinSupportedVersion": `Minimum supported version`,
+	"LatestVersion":       `Latest supported version`,
+	"MinAgentVersion":     `Introduced in*`,
 }
 
 var appFS = afero.NewOsFs()
@@ -422,17 +427,7 @@ func renderAsAscii(data []ReleaseData, writer io.Writer) {
 // email it to a customer).
 func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
 	outputTable := releaseDataToTable(data)
-	io.WriteString(
-		writer,
-		heredoc.Doc(`
-			## Instrumented Modules
-
-			After installation, the agent automatically instruments with our catalog of supported Node.js libraries and frameworks. This gives you immediate access to granular information specific to your web apps and servers.  For unsupported frameworks or libraries, you'll need to instrument the agent yourself using the [Node.js agent API](https://docs.newrelic.com/docs/apm/agents/nodejs-agent/api-guides/nodejs-agent-api/).
-
-			**Note**: The latest supported version may not reflect the most recent supported version.
-
-		`),
-	)
+	io.WriteString(writer, docPreamble)
 	io.WriteString(writer, "\n")
 	io.WriteString(writer, outputTable.RenderMarkdown())
 	io.WriteString(writer, "\n\n")
