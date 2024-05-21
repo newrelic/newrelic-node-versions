@@ -80,25 +80,33 @@ modules.
 
 The following flags are supported:
 
-  -n, --no-externals           Disable cloning and processing of external repos. An external repo is
-                               one that provides extra functionality to the "newrelic" module. This
-                               allows processing a single repo with --repo-dir. The default, i.e. not
-                               supplying this flag, is to process all known external repos.
-                               
-  -o, --output-format string   Specify the format to write the results as. The default is an ASCII
-                               table. Possible values: "ascii" or "markdown".
-                                (default "markdown")
-  -r, --repo-dir string        Specify a local directory that contains a Node.js instrumentation repo.
-                               If not provided, the main agent GitHub repository will be cloned to a
-                               local temporary directory and that will be used.
-                               
-  -t, --test-dir string        Specify the test directory to parse the package.json files.
-                               If not provided, it will default to 'test/versioned'. This applies to
-                               the repo provided by the --repo-dir flag.
-                                
-  -v, --verbose                Enable verbose output. As the data is being loaded and parsed various
-                               logs will be written to stderr that should give indicators of what
-                               is happening.
+  -n, --no-externals             Disable cloning and processing of external repos. An external repo is
+                                 one that provides extra functionality to the "newrelic" module. This
+                                 allows processing a single repo with --repo-dir. The default, i.e. not
+                                 supplying this flag, is to process all known external repos.
+                                 
+  -o, --output-format string     Specify the format to write the results as. The default is an ASCII
+                                 table. Possible values: "ascii" or "markdown".
+                                  (default "markdown")
+  -R, --replace-in-file string   Specify a target file in which the results will be written. Normally,
+                                 the result is written to stdout. When this flag is given, the result
+                                 will be written to the specified file. The generated text will replace
+                                 all text in the file between two marker lines. The markers can be defined
+                                 through environment variables: START_MARKER and END_MARKER. Default values
+                                 are "{/* begin: compat-table */}"
+                                 and "{/* end: compat-table */}".
+                                 
+  -r, --repo-dir string          Specify a local directory that contains a Node.js instrumentation repo.
+                                 If not provided, the main agent GitHub repository will be cloned to a
+                                 local temporary directory and that will be used.
+                                 
+  -t, --test-dir string          Specify the test directory to parse the package.json files.
+                                 If not provided, it will default to 'test/versioned'. This applies to
+                                 the repo provided by the --repo-dir flag.
+                                  
+  -v, --verbose                  Enable verbose output. As the data is being loaded and parsed various
+                                 logs will be written to stderr that should give indicators of what
+                                 is happening.
 ```
 
 ## Building

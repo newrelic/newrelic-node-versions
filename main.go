@@ -12,7 +12,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
+
+	_ "embed"
 
 	"blitznote.com/src/semver/v3"
 	"github.com/MakeNowJust/heredoc/v2"
@@ -22,6 +25,9 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+//go:embed tmpl/preamble.md
+var docPreamble string
+
 var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, branch: `main`, testPath: `test/versioned`}
 var externalsRepos = []nrRepo{
 	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
@@ -29,10 +35,10 @@ var externalsRepos = []nrRepo{
 }
 
 var columHeaders = map[string]string{
-	"Name":                `Package Name`,
-	"MinSupportedVersion": `Minimum Supported Version`,
-	"LatestVersion":       `Latest Supported Version`,
-	"MinAgentVersion":     `Minimum Agent Version*`,
+	"Name":                `Package name`,
+	"MinSupportedVersion": `Minimum supported version`,
+	"LatestVersion":       `Latest supported version`,
+	"MinAgentVersion":     `Introduced in*`,
 }
 
 var appFS = afero.NewOsFs()
@@ -97,16 +103,33 @@ func run(args []string) error {
 
 	cleanupTempDirs(cloneResults, logger)
 
+	var writeDest io.Writer
+	if flags.replaceInFile != "" {
+		writeDest = &strings.Builder{}
+	} else {
+		writeDest = os.Stdout
+	}
+
 	slices.SortFunc(data, releaseDataSorter)
 	prunedData := pruneData(data)
 	switch flags.outputFormat.String() {
 	default:
-		renderAsAscii(prunedData, os.Stdout)
+		renderAsAscii(prunedData, writeDest)
 	case "ascii":
-		renderAsAscii(prunedData, os.Stdout)
+		renderAsAscii(prunedData, writeDest)
 	case "markdown":
-		renderAsMarkdown(prunedData, os.Stdout)
+		renderAsMarkdown(prunedData, writeDest)
 	}
+
+	if flags.replaceInFile != "" {
+		content := writeDest.(*strings.Builder).String()
+		err = ReplaceInFile(flags.replaceInFile, content, flags.startMarker, flags.endMarker)
+		if err != nil {
+			return err
+		}
+	}
+
+	logger.Info("done")
 
 	return nil
 }
@@ -404,17 +427,7 @@ func renderAsAscii(data []ReleaseData, writer io.Writer) {
 // email it to a customer).
 func renderAsMarkdown(data []ReleaseData, writer io.Writer) {
 	outputTable := releaseDataToTable(data)
-	io.WriteString(
-		writer,
-		heredoc.Doc(`
-			## Instrumented Modules
-
-			After installation, the agent automatically instruments with our catalog of supported Node.js libraries and frameworks. This gives you immediate access to granular information specific to your web apps and servers.  For unsupported frameworks or libraries, you'll need to instrument the agent yourself using the [Node.js agent API](https://docs.newrelic.com/docs/apm/agents/nodejs-agent/api-guides/nodejs-agent-api/).
-
-			**Note**: The latest supported version may not reflect the most recent supported version.
-
-		`),
-	)
+	io.WriteString(writer, docPreamble)
 	io.WriteString(writer, "\n")
 	io.WriteString(writer, outputTable.RenderMarkdown())
 	io.WriteString(writer, "\n\n")
@@ -448,7 +461,13 @@ func releaseDataToTable(data []ReleaseData) table.Writer {
 		row := table.Row{}
 		rv = reflect.ValueOf(info)
 		for _, key := range keys {
-			row = append(row, rv.FieldByName(key).Interface())
+			value := rv.FieldByName(key).Interface().(string)
+			if key == "Name" {
+				value = fmt.Sprintf("`%s`", value)
+			} else if key == "MinAgentVersion" && strings.HasPrefix(value, "@") == true {
+				value = fmt.Sprintf("`%s`", value)
+			}
+			row = append(row, value)
 		}
 		outputTable.AppendRow(row)
 	}

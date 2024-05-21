@@ -21,14 +21,14 @@ tasks:
       - go test ./...
     sources:
       - "**/*.go"
-      - "**/package.json"
+      - "**/testdata/*"
 
   test-cov:
     cmds:
       - go test -cover ./...
     sources:
       - "**/*.go"
-      - "**/package.json"
+      - "**/testdata/*"
 
   test-cov-html:
     cmds:
@@ -36,4 +36,4 @@ tasks:
       - go tool cover -html=./coverage.out -o ./coverage.html
     sources:
       - "**/*.go"
-      - "**/package.json"
+      - "**/testdata/*"

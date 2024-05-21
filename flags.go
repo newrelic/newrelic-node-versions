@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"slices"
 
 	"github.com/MakeNowJust/heredoc/v2"
@@ -9,11 +10,15 @@ import (
 )
 
 type appFlags struct {
-	noExternals  bool
-	outputFormat *StringEnumValue
-	repoDir      string
-	testDir      string
-	verbose      bool
+	noExternals   bool
+	outputFormat  *StringEnumValue
+	replaceInFile string
+	repoDir       string
+	testDir       string
+	verbose       bool
+
+	startMarker string
+	endMarker   string
 }
 
 var flags = appFlags{}
@@ -60,6 +65,23 @@ func createAndParseFlags(args []string) error {
 	)
 
 	fs.StringVarP(
+		&flags.replaceInFile,
+		"replace-in-file",
+		"R",
+		"",
+		heredoc.Doc(`
+			Specify a target file in which the results will be written. Normally,
+			the result is written to stdout. When this flag is given, the result
+			will be written to the specified file. The generated text will replace
+			all text in the file between two marker lines. The markers can be defined
+			through environment variables: START_MARKER and END_MARKER. Default values
+			are "{/* begin: compat-table */}"
+			and "{/* end: compat-table */}".
+		`,
+		),
+	)
+
+	fs.StringVarP(
 		&flags.repoDir,
 		"repo-dir",
 		"r",
@@ -95,11 +117,24 @@ func createAndParseFlags(args []string) error {
 		`),
 	)
 
-	// TODO: add flags for generating different formats:
-	// 2. docs site
-	// They should also generate new PRs for the respective repos.
-
+	readEnvironment()
 	return fs.Parse(args[1:])
+}
+
+func readEnvironment() {
+	marker, envIsSet := os.LookupEnv("START_MARKER")
+	if envIsSet == true {
+		flags.startMarker = marker
+	} else {
+		flags.startMarker = "{/* begin: compat-table */}"
+	}
+
+	marker, envIsSet = os.LookupEnv("END_MARKER")
+	if envIsSet == true {
+		flags.endMarker = marker
+	} else {
+		flags.endMarker = "{/* end: compat-table */}"
+	}
 }
 
 func printUsage(help string) {

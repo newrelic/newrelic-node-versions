@@ -14,6 +14,8 @@ func Test_createAndParseFlags(t *testing.T) {
 				allowed: []string{"ascii", "markdown"},
 				value:   "markdown",
 			},
+			startMarker: "{/* begin: compat-table */}",
+			endMarker:   "{/* end: compat-table */}",
 		}
 		assert.Nil(t, err)
 		assert.Equal(t, expected, flags)
