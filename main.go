@@ -461,7 +461,13 @@ func releaseDataToTable(data []ReleaseData) table.Writer {
 		row := table.Row{}
 		rv = reflect.ValueOf(info)
 		for _, key := range keys {
-			row = append(row, rv.FieldByName(key).Interface())
+			value := rv.FieldByName(key).Interface().(string)
+			if key == "Name" {
+				value = fmt.Sprintf("`%s`", value)
+			} else if key == "MinAgentVersion" && strings.HasPrefix(value, "@") == true {
+				value = fmt.Sprintf("`%s`", value)
+			}
+			row = append(row, value)
 		}
 		outputTable.AppendRow(row)
 	}

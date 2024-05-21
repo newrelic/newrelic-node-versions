@@ -292,3 +292,29 @@ func Test_pruneData(t *testing.T) {
 	}
 	assert.Equal(t, expected, pruneData(input))
 }
+
+func Test_releaseDataToTable(t *testing.T) {
+	input := []ReleaseData{
+		{
+			Name:                       "foo",
+			MinSupportedVersion:        "1.0.0",
+			MinSupportedVersionRelease: "2023-05-21",
+			LatestVersion:              "2.0.0",
+			LatestVersionRelease:       "2024-05-21",
+			MinAgentVersion:            "2.0.0",
+		},
+		{
+			Name:                       "@foo/bar",
+			MinSupportedVersion:        "1.0.0",
+			MinSupportedVersionRelease: "2023-05-21",
+			LatestVersion:              "2.0.0",
+			LatestVersionRelease:       "2024-05-21",
+			MinAgentVersion:            "@newrelic/foo-bar@1.0.0",
+		},
+	}
+	expected, err := os.ReadFile("testdata/data-table.expected.md")
+	require.Nil(t, err)
+
+	found := releaseDataToTable(input)
+	assert.Equal(t, expected, []byte(found.RenderMarkdown()+"\n"))
+}
