@@ -2,17 +2,15 @@
 
 The Node.js agent supports the following AI platforms and integrations.
 
-### Amazon Bedrock
+{{range .Gateways -}}
+### {{.Title}}
 
-Through the `@aws-sdk/client-bedrock-runtime` module, we support:
+{{if .Preamble}}{{.Preamble}}{{end}}
 
-| Model | Text | Image |
-| --- | --- | --- |
-{{range .Bedrock.Models -}}
-| {{.Name}} | {{boolEmoji .Text}} | {{boolEmoji .Image}} |
+{{gatewayModelsToTable .Models}}
+
+{{if .Footnote}}{{.Footnote}}{{end}}
 {{end}}
-
-Note: if a model supports streaming, we also instrument the streaming variant.
 
 ### Langchain
 

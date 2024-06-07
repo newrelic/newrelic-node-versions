@@ -15,11 +15,13 @@ func Test_AiCompatJson(t *testing.T) {
 	var parsed AiCompatJson
 	err = json.Unmarshal(fileData, &parsed)
 	require.Nil(t, err)
-	assert.Equal(t, 3, len(parsed))
+	assert.Equal(t, 4, len(parsed))
 
 	expectedGateway := AiCompatEnvelope{
-		Kind:  AiCompatKindGateway,
-		Title: "Amazon Bedrock",
+		Kind:     AiCompatKindGateway,
+		Title:    "Amazon Bedrock",
+		Preamble: "Through the `@aws-sdk/client-bedrock-runtime` module, we support:",
+		Footnote: "Note: if a model supports streaming, we also instrument the streaming variant.",
 		Models: []AiCompatModel{
 			{
 				Name: "Claude",
@@ -53,7 +55,7 @@ func Test_AiCompatJson(t *testing.T) {
 			{"OpenAI", true, true},
 		},
 	}
-	assert.Equal(t, expectedAbstraction, parsed[1])
+	assert.Equal(t, expectedAbstraction, parsed[2])
 
 	expectedSdk := AiCompatEnvelope{
 		Kind:  AiCompatKindSdk,
@@ -67,5 +69,5 @@ func Test_AiCompatJson(t *testing.T) {
 			{"Audio", false},
 		},
 	}
-	assert.Equal(t, expectedSdk, parsed[2])
+	assert.Equal(t, expectedSdk, parsed[3])
 }

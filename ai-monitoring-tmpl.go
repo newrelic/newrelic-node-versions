@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"text/template"
 )
@@ -51,12 +52,15 @@ func aiCompatReadJson(file io.Reader) (AiCompatJson, error) {
 }
 
 func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
-	result := AiCompatTemplateData{}
+	result := AiCompatTemplateData{
+		Gateways: make([]AiCompatGateway, 0),
+	}
 
 	for _, envelope := range input {
 		switch strings.ToLower(envelope.Kind) {
 		case AiCompatKindGateway:
-			result.Bedrock = aiCompatParseBedrockData(envelope)
+			gateway := aiCompatParseGateway(envelope)
+			result.Gateways = append(result.Gateways, gateway)
 		case AiCompatKindAbstraction:
 			result.Langchain = aiCompatParseLangchainData(envelope)
 		case AiCompatKindSdk:
@@ -67,11 +71,28 @@ func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
 	return result
 }
 
+func aiCompatParseGateway(input AiCompatEnvelope) AiCompatGateway {
+	result := AiCompatGateway{
+		Title:    input.Title,
+		Preamble: input.Preamble,
+		Footnote: input.Footnote,
+	}
+
+	models := make([]AiCompatGatewayModel, 0)
+	for _, model := range input.Models {
+		models = append(models, AiCompatGatewayModel{model.Name, model.Features})
+	}
+	result.Models = models
+
+	return result
+}
+
 func aiCompatLoadTemplate() (*template.Template, error) {
 	tmpl := template.New("aiMonitoring")
 
 	tmpl.Funcs(template.FuncMap{
-		"boolEmoji": aiCompatBoolEmoji,
+		"boolEmoji":            aiCompatBoolEmoji,
+		"gatewayModelsToTable": aiModelsToTable,
 	})
 
 	tmpl, err := tmpl.Parse(aiMonitoringTmplString)
@@ -80,35 +101,6 @@ func aiCompatLoadTemplate() (*template.Template, error) {
 	}
 
 	return tmpl, nil
-}
-
-func aiCompatParseBedrockData(envelope AiCompatEnvelope) AiCompatBedrockData {
-	result := AiCompatBedrockData{Title: envelope.Title}
-
-	result.Models = make([]struct {
-		Name  string
-		Text  bool
-		Image bool
-	}, 0)
-	for _, model := range envelope.Models {
-		modelData := struct {
-			Name  string
-			Text  bool
-			Image bool
-		}{}
-		modelData.Name = model.Name
-		for _, feature := range model.Features {
-			if strings.ToLower(feature.Title) == "text" {
-				modelData.Text = feature.Supported
-			}
-			if strings.ToLower(feature.Title) == "Image" {
-				modelData.Image = feature.Supported
-			}
-		}
-		result.Models = append(result.Models, modelData)
-	}
-
-	return result
 }
 
 func aiCompatParseLangchainData(envelope AiCompatEnvelope) AiCompatLangchainData {
@@ -182,4 +174,39 @@ func aiCompatBoolEmoji(input bool) string {
 		return "✅"
 	}
 	return "❌"
+}
+
+func aiModelsToTable(input []AiCompatGatewayModel) string {
+	result := strings.Builder{}
+
+	featureTitles := make([]string, 0)
+	for _, val := range input[0].Features {
+		featureTitles = append(featureTitles, val.Title)
+	}
+	slices.Sort(featureTitles)
+
+	header := "| Model |"
+	separator := "| --- |"
+	for _, title := range featureTitles {
+		header = fmt.Sprintf("%s %s |", header, title)
+		separator = fmt.Sprintf("%s --- |", separator)
+	}
+	result.WriteString(header + "\n")
+	result.WriteString(separator + "\n")
+
+	for _, model := range input {
+		row := fmt.Sprintf("| %s |", model.Title)
+		slices.SortFunc(model.Features, func(a AiCompatFeature, b AiCompatFeature) int {
+			if a.Title < b.Title {
+				return -1
+			}
+			return 1
+		})
+		for _, feature := range model.Features {
+			row = fmt.Sprintf("%s %s |", row, aiCompatBoolEmoji(feature.Supported))
+		}
+		result.WriteString(row + "\n")
+	}
+
+	return strings.TrimSpace(result.String())
 }

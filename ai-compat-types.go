@@ -9,9 +9,23 @@ type AiCompatJson []AiCompatEnvelope
 type AiCompatEnvelope struct {
 	Kind      string             `json:"kind"`
 	Title     string             `json:"title"`
+	Preamble  string             `json:"preamble"`
+	Footnote  string             `json:"footnote"`
 	Models    []AiCompatModel    `json:"models,omitempty"`
 	Features  []AiCompatFeature  `json:"features,omitempty"`
 	Providers []AiCompatProvider `json:"providers,omitempty"`
+}
+
+type AiCompatGateway struct {
+	Title    string
+	Preamble string
+	Footnote string
+	Models   []AiCompatGatewayModel
+}
+
+type AiCompatGatewayModel struct {
+	Title    string
+	Features []AiCompatFeature
 }
 
 type AiCompatFeature struct {
@@ -31,6 +45,7 @@ type AiCompatProvider struct {
 }
 
 type AiCompatTemplateData struct {
+	Gateways  []AiCompatGateway
 	Bedrock   AiCompatBedrockData
 	Langchain AiCompatLangchainData
 	Openai    AiCompatOpenaiData
