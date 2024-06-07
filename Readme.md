@@ -24,50 +24,8 @@ This project relies on some community tools that require extra installation:
 ./nrversions
 ```
 
-Will output a compatibility report like this
-
-```
-+------------------------+---------------------+----------------------------+---------------+----------------------+
-| NAME                   | MINSUPPORTEDVERSION | MINSUPPORTEDVERSIONRELEASE | LATESTVERSION | LATESTVERSIONRELEASE |
-+------------------------+---------------------+----------------------------+---------------+----------------------+
-| @apollo/gateway        | 2.3.0               | 2023-01-25                 | 2.7.3         | 2024-04-16           |
-| @apollo/server         | 4.0.0               | 2022-10-10                 | 4.10.3        | 2024-04-15           |
-| @elastic/elasticsearch | 7.16.0              | 2021-12-15                 | 8.13.1        | 2024-04-09           |
-| @grpc/grpc-js          | 1.4.0               | 2021-10-13                 | 1.10.6        | 2024-04-03           |
-| @hapi/hapi             | 20.1.2              | 2021-03-20                 | 21.3.9        | 2024-04-09           |
-| @langchain/core        | 0.1.17              | 2024-01-19                 | 0.1.58        | 2024-04-16           |
-| @nestjs/cli            | 8.0.0               | 2021-07-07                 | 10.3.2        | 2024-02-07           |
-| @prisma/client         | 5.0.0               | 2023-07-11                 | 5.12.1        | 2024-04-04           |
-| amqplib                | 0.5.0               | 2016-11-01                 | 0.10.4        | 2024-04-11           |
-| apollo-server          | 2.14.0              | 2020-05-27                 | 3.13.0        | 2023-11-14           |
-| apollo-server-express  | 2.14.0              | 2020-05-27                 | 3.13.0        | 2023-11-14           |
-| apollo-server-fastify  | 2.14.0              | 2020-05-27                 | 3.13.0        | 2023-11-14           |
-| apollo-server-hapi     | 3.0.0               | 2021-07-07                 | 3.13.0        | 2023-11-14           |
-| apollo-server-koa      | 2.14.0              | 2020-05-27                 | 3.13.0        | 2023-11-14           |
-| apollo-server-lambda   | 2.14.0              | 2020-05-27                 | 3.13.0        | 2023-11-14           |
-| bluebird               | 2.0.0               | 2014-06-04                 | 3.7.2         | 2019-11-28           |
-| bunyan                 | 1.8.12              | 2017-08-02                 | 1.8.15        | 2021-01-08           |
-| cassandra-driver       | 3.4.0               | 2018-02-05                 | 4.7.2         | 2023-09-21           |
-| connect                | 2.0.0               | 2012-02-28                 | 3.7.0         | 2019-05-18           |
-| director               | 1.2.0               | 2013-04-01                 | 1.2.8         | 2015-02-04           |
-| express                | 4.6.0               | 2014-07-12                 | 4.19.2        | 2024-03-25           |
-| fastify                | 2.0.0               | 2019-02-25                 | 4.26.2        | 2024-03-03           |
-| generic-pool           | 2.4.0               | 2016-01-18                 | 3.9.0         | 2022-09-10           |
-| ioredis                | 3.0.0               | 2017-05-18                 | 5.3.2         | 2023-04-15           |
-| mongodb                | 2.1.0               | 2015-12-06                 | 6.5.0         | 2024-03-11           |
-| mysql                  | 2.2.0               | 2014-04-27                 | 2.18.1        | 2020-01-23           |
-| mysql2                 | 1.3.1               | 2017-05-31                 | 3.9.4         | 2024-04-09           |
-| next                   | 13.0.0              | 2022-10-25                 | 14.2.1        | 2024-04-12           |
-| openai                 | 4.0.0               | 2023-08-16                 | 4.35.0        | 2024-04-16           |
-| pg                     | 8.2.0               | 2020-05-13                 | 8.11.5        | 2024-04-02           |
-| pino                   | 7.0.0               | 2021-10-14                 | 8.20.0        | 2024-04-06           |
-| redis                  | 2.0.0               | 2015-09-21                 | 4.6.13        | 2024-02-05           |
-| restify                | 5.0.0               | 2017-06-27                 | 11.1.0        | 2023-02-24           |
-| superagent             | 2.0.0               | 2016-05-29                 | 8.1.2         | 2023-08-15           |
-| undici                 | 4.7.0               | 2021-09-22                 | 6.13.0        | 2024-04-12           |
-| winston                | 3.0.0               | 2018-06-12                 | 3.13.0        | 2024-03-24           |
-+------------------------+---------------------+----------------------------+---------------+----------------------+
-```
+Will output a report document as shown in our main repo's
+[compatibility doc](https://github.com/newrelic/node-newrelic/blob/main/compatibility.md).
 
 For optional CLI args, run:
 
@@ -80,14 +38,15 @@ modules.
 
 The following flags are supported:
 
+  -a, --ai-compat-json string    Path to the ai-compat.json file that describes the AI Monitoring
+                                 compatibility of the agent. The default is to use the JSON file included
+                                 in the mainline agent repository.
+                                 
   -n, --no-externals             Disable cloning and processing of external repos. An external repo is
                                  one that provides extra functionality to the "newrelic" module. This
                                  allows processing a single repo with --repo-dir. The default, i.e. not
                                  supplying this flag, is to process all known external repos.
                                  
-  -o, --output-format string     Specify the format to write the results as. The default is an ASCII
-                                 table. Possible values: "ascii" or "markdown".
-                                  (default "markdown")
   -R, --replace-in-file string   Specify a target file in which the results will be written. Normally,
                                  the result is written to stdout. When this flag is given, the result
                                  will be written to the specified file. The generated text will replace

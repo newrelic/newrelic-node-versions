@@ -2,20 +2,18 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"slices"
-
 	"github.com/MakeNowJust/heredoc/v2"
 	flag "github.com/spf13/pflag"
+	"os"
 )
 
 type appFlags struct {
-	noExternals   bool
-	outputFormat  *StringEnumValue
-	replaceInFile string
-	repoDir       string
-	testDir       string
-	verbose       bool
+	aiCompatJsonFile string
+	noExternals      bool
+	replaceInFile    string
+	repoDir          string
+	testDir          string
+	verbose          bool
 
 	startMarker string
 	endMarker   string
@@ -37,6 +35,18 @@ func createAndParseFlags(args []string) error {
 		printUsage(fs.FlagUsages())
 	}
 
+	fs.StringVarP(
+		&flags.aiCompatJsonFile,
+		"ai-compat-json",
+		"a",
+		"",
+		heredoc.Doc(`
+			Path to the ai-compat.json file that describes the AI Monitoring
+			compatibility of the agent. The default is to use the JSON file included
+			in the mainline agent repository.
+		`),
+	)
+
 	fs.BoolVarP(
 		&flags.noExternals,
 		"no-externals",
@@ -47,20 +57,6 @@ func createAndParseFlags(args []string) error {
 			one that provides extra functionality to the "newrelic" module. This
 			allows processing a single repo with --repo-dir. The default, i.e. not
 			supplying this flag, is to process all known external repos.
-		`),
-	)
-
-	flags.outputFormat = NewStringEnumValue(
-		[]string{"ascii", "markdown"},
-		"markdown",
-	)
-	fs.VarP(
-		flags.outputFormat,
-		"output-format",
-		"o",
-		heredoc.Doc(`
-			Specify the format to write the results as. The default is an ASCII
-			table. Possible values: "ascii" or "markdown".
 		`),
 	)
 
@@ -140,39 +136,4 @@ func readEnvironment() {
 func printUsage(help string) {
 	fmt.Println(usageText)
 	fmt.Println(help)
-}
-
-// StringEnumValue is a custom [flag.Value] implementation that
-// allows a specific set of string values.
-// See https://github.com/spf13/pflag/issues/236#issuecomment-931600452
-type StringEnumValue struct {
-	allowed []string
-	value   string
-}
-
-// NewStringEnumValue creates a new [StringEnumValue] with a defined set of
-// allowed values and a sets the initial value to a default value (`def`).
-func NewStringEnumValue(allowed []string, def string) *StringEnumValue {
-	return &StringEnumValue{
-		allowed: allowed,
-		value:   def,
-	}
-}
-
-func (sev *StringEnumValue) String() string {
-	return sev.value
-}
-
-func (sev *StringEnumValue) Set(val string) error {
-	if slices.Contains(sev.allowed, val) == false {
-		return fmt.Errorf("%s is not an allowed value", val)
-	}
-
-	sev.value = val
-
-	return nil
-}
-
-func (sev *StringEnumValue) Type() string {
-	return "string"
 }

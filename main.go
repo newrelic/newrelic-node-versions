@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -98,10 +99,21 @@ func run(args []string) error {
 	}
 
 	logger.Info("processing data")
+	defer func() {
+		cleanupTempDirs(cloneResults, logger)
+	}()
 	data := processVersionedTestDirs(testDirs, logger)
-	logger.Info("data processing complete")
 
-	cleanupTempDirs(cloneResults, logger)
+	aiCompatInputFile := flags.aiCompatJsonFile
+	if aiCompatInputFile == "" {
+		aiCompatInputFile = path.Join(cloneResults[0].Directory, "ai-support.json")
+	}
+	aiCompatDoc := strings.Builder{}
+	err = RenderAiCompatDoc(aiCompatInputFile, &aiCompatDoc)
+	if err != nil {
+		return fmt.Errorf("failed to process ai compat doc: %w", err)
+	}
+	logger.Info("data processing complete")
 
 	var writeDest io.Writer
 	if flags.replaceInFile != "" {
@@ -112,14 +124,8 @@ func run(args []string) error {
 
 	slices.SortFunc(data, releaseDataSorter)
 	prunedData := pruneData(data)
-	switch flags.outputFormat.String() {
-	default:
-		renderAsAscii(prunedData, writeDest)
-	case "ascii":
-		renderAsAscii(prunedData, writeDest)
-	case "markdown":
-		renderAsMarkdown(prunedData, writeDest)
-	}
+	renderAsMarkdown(prunedData, writeDest)
+	io.WriteString(writeDest, "\n"+aiCompatDoc.String())
 
 	if flags.replaceInFile != "" {
 		content := writeDest.(*strings.Builder).String()
@@ -412,13 +418,6 @@ func pruneData(data []ReleaseData) []ReleaseData {
 	}
 
 	return result
-}
-
-// renderAsAscii renders the collected data as an ASCII table. This is
-// intended to be used when generating local CLI output during testing.
-func renderAsAscii(data []ReleaseData, writer io.Writer) {
-	outputTable := releaseDataToTable(data)
-	io.WriteString(writer, outputTable.Render())
 }
 
 // renderAsMarkdown renders the collected data as a Markdown table. This is
