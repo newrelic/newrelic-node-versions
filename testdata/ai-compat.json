@@ -54,6 +54,8 @@
   {
     "kind": "abstraction",
     "title": "Langchain",
+    "featuresPreamble": "The following general features of Langchain are supported:",
+    "providersPreamble": "Models/providers are generally supported transitively by our instrumentation of the provider's module.",
     "features": [
       {
         "title": "Agents",

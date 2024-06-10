@@ -53,7 +53,8 @@ func aiCompatReadJson(file io.Reader) (AiCompatJson, error) {
 
 func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
 	result := AiCompatTemplateData{
-		Gateways: make([]AiCompatGateway, 0),
+		Abstractions: make([]AiCompatAbstraction, 0),
+		Gateways:     make([]AiCompatGateway, 0),
 	}
 
 	for _, envelope := range input {
@@ -62,7 +63,8 @@ func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
 			gateway := aiCompatParseGateway(envelope)
 			result.Gateways = append(result.Gateways, gateway)
 		case AiCompatKindAbstraction:
-			result.Langchain = aiCompatParseLangchainData(envelope)
+			abstraction := aiCompatParseAbstraction(envelope)
+			result.Abstractions = append(result.Abstractions, abstraction)
 		case AiCompatKindSdk:
 			result.Openai = aiCompatParseOpenaiData(envelope)
 		}
@@ -87,12 +89,24 @@ func aiCompatParseGateway(input AiCompatEnvelope) AiCompatGateway {
 	return result
 }
 
+func aiCompatParseAbstraction(input AiCompatEnvelope) AiCompatAbstraction {
+	return AiCompatAbstraction{
+		Title:             input.Title,
+		FeaturesPreamble:  input.FeaturesPreamble,
+		ProvidersPreamble: input.ProvidersPreamble,
+		Features:          input.Features,
+		Providers:         input.Providers,
+	}
+}
+
 func aiCompatLoadTemplate() (*template.Template, error) {
 	tmpl := template.New("aiMonitoring")
 
 	tmpl.Funcs(template.FuncMap{
 		"boolEmoji":            aiCompatBoolEmoji,
+		"featuresToTable":      aiFeaturesToTable,
 		"gatewayModelsToTable": aiModelsToTable,
+		"providersToTable":     aiProvidersToTable,
 	})
 
 	tmpl, err := tmpl.Parse(aiMonitoringTmplString)
@@ -101,45 +115,6 @@ func aiCompatLoadTemplate() (*template.Template, error) {
 	}
 
 	return tmpl, nil
-}
-
-func aiCompatParseLangchainData(envelope AiCompatEnvelope) AiCompatLangchainData {
-	result := AiCompatLangchainData{Title: envelope.Title}
-
-	result.Features = struct {
-		Agents       bool
-		Chains       bool
-		Vectorstores bool
-		Tools        bool
-	}{}
-	for _, feature := range envelope.Features {
-		switch strings.ToLower(feature.Title) {
-		case "agents":
-			result.Features.Agents = feature.Supported
-		case "chains":
-			result.Features.Chains = feature.Supported
-		case "vectorstores":
-			result.Features.Vectorstores = feature.Supported
-		case "Tools":
-			result.Features.Tools = feature.Supported
-		}
-	}
-
-	result.Providers = make([]struct {
-		Name         string
-		Supported    bool
-		Transitively bool
-	}, 0)
-	for _, provider := range envelope.Providers {
-		providerData := struct {
-			Name         string
-			Supported    bool
-			Transitively bool
-		}{provider.Name, provider.Supported, provider.Transitively}
-		result.Providers = append(result.Providers, providerData)
-	}
-
-	return result
 }
 
 func aiCompatParseOpenaiData(envelope AiCompatEnvelope) AiCompatOpenaiData {
@@ -166,9 +141,7 @@ func aiCompatParseOpenaiData(envelope AiCompatEnvelope) AiCompatOpenaiData {
 }
 
 // aiCompatBoolEmoji converts a boolean into emoji text representing the
-// respective value. It is added to the AI compat document template as a
-// convenience method so that if/else blocks do not need to be repeated
-// throughout the template source.
+// respective value.
 func aiCompatBoolEmoji(input bool) string {
 	if input == true {
 		return "✅"
@@ -176,6 +149,8 @@ func aiCompatBoolEmoji(input bool) string {
 	return "❌"
 }
 
+// aiModelsToTable renders a set of gateway objects into a Markdown table.
+// It is added to the AI Monitoring template as a convenience function.
 func aiModelsToTable(input []AiCompatGatewayModel) string {
 	result := strings.Builder{}
 
@@ -184,24 +159,12 @@ func aiModelsToTable(input []AiCompatGatewayModel) string {
 		featureTitles = append(featureTitles, val.Title)
 	}
 	slices.Sort(featureTitles)
-
-	header := "| Model |"
-	separator := "| --- |"
-	for _, title := range featureTitles {
-		header = fmt.Sprintf("%s %s |", header, title)
-		separator = fmt.Sprintf("%s --- |", separator)
-	}
-	result.WriteString(header + "\n")
-	result.WriteString(separator + "\n")
+	featureTitles = append([]string{"Model"}, featureTitles...)
+	result.WriteString(titlesToTableHeader(featureTitles))
 
 	for _, model := range input {
 		row := fmt.Sprintf("| %s |", model.Title)
-		slices.SortFunc(model.Features, func(a AiCompatFeature, b AiCompatFeature) int {
-			if a.Title < b.Title {
-				return -1
-			}
-			return 1
-		})
+		slices.SortFunc(model.Features, sortFeaturesFn)
 		for _, feature := range model.Features {
 			row = fmt.Sprintf("%s %s |", row, aiCompatBoolEmoji(feature.Supported))
 		}
@@ -209,4 +172,70 @@ func aiModelsToTable(input []AiCompatGatewayModel) string {
 	}
 
 	return strings.TrimSpace(result.String())
+}
+
+// aiFeaturesToTable renders a set of feature objects into a Markdown table.
+// It is added to the AI Monitoring template as a convenience function.
+func aiFeaturesToTable(input []AiCompatFeature) string {
+	result := strings.Builder{}
+
+	titles := make([]string, 0)
+	for _, val := range input {
+		titles = append(titles, val.Title)
+	}
+	slices.Sort(titles)
+	result.WriteString(titlesToTableHeader(titles))
+
+	slices.SortFunc(input, sortFeaturesFn)
+	for _, feature := range input {
+		col := fmt.Sprintf("| %s ", aiCompatBoolEmoji(feature.Supported))
+		result.WriteString(col)
+	}
+	result.WriteString("|\n")
+
+	return strings.TrimSpace(result.String())
+}
+
+// aiProvidersToTable renders a set of provider objects into a Markdown table.
+// It is added to the AI Monitoring template as a convenience function.
+func aiProvidersToTable(input []AiCompatProvider) string {
+	result := strings.Builder{}
+
+	result.WriteString("| Provider | Supported | Transitively |\n")
+	result.WriteString("| --- | --- | --- |\n")
+
+	for _, provider := range input {
+		row := fmt.Sprintf(
+			"| %s | %s | %s |\n",
+			provider.Name,
+			aiCompatBoolEmoji(provider.Supported),
+			aiCompatBoolEmoji(provider.Transitively),
+		)
+		result.WriteString(row)
+	}
+
+	return strings.TrimSpace(result.String())
+}
+
+// titlesToTableHeader converts a set of strings into a Markdown table heading.
+// That is, a row of names followed by a row of heading markers.
+func titlesToTableHeader(input []string) string {
+	header := "|"
+	separator := "|"
+
+	for _, val := range input {
+		header = fmt.Sprintf("%s %s |", header, val)
+		separator = fmt.Sprintf("%s --- |", separator)
+	}
+
+	return header + "\n" + separator + "\n"
+}
+
+// sortFeaturesFn is provided to [slices.SortFunc] as the function that
+// determines the ordering of features.
+func sortFeaturesFn(a AiCompatFeature, b AiCompatFeature) int {
+	if a.Title < b.Title {
+		return -1
+	}
+	return 1
 }

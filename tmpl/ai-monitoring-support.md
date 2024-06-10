@@ -12,23 +12,16 @@ The Node.js agent supports the following AI platforms and integrations.
 {{if .Footnote}}{{.Footnote}}{{end}}
 {{end}}
 
-### Langchain
+{{range .Abstractions -}}
+### {{.Title}}
 
-The following general features of Langchain are supported:
+{{if .FeaturesPreamble}}{{.FeaturesPreamble}}{{end}}
 
-| Agents | Chains | Vectorstores | Tools |
-| --- | --- | --- | --- |
-{{- with .Langchain.Features}}
-| {{boolEmoji .Agents}} | {{boolEmoji .Chains}} | {{boolEmoji .Vectorstores}} | {{boolEmoji .Tools}} |
-{{end}}
+{{featuresToTable .Features}}
 
-Models/providers are generally supported transitively by our instrumentation of
-the provider's module.
+{{if .ProvidersPreamble}}{{.ProvidersPreamble}}{{end}}
 
-| Provider | Supported | Transitively |
-| --- | --- | --- |
-{{range .Langchain.Providers -}}
-| {{.Name}} | {{boolEmoji .Supported}} | {{boolEmoji .Transitively}} |
+{{providersToTable .Providers}}
 {{end}}
 
 ### OpenAI

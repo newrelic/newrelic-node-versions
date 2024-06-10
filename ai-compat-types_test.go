@@ -42,8 +42,10 @@ func Test_AiCompatJson(t *testing.T) {
 	assert.Equal(t, expectedGateway, parsed[0])
 
 	expectedAbstraction := AiCompatEnvelope{
-		Kind:  AiCompatKindAbstraction,
-		Title: "Langchain",
+		Kind:              AiCompatKindAbstraction,
+		Title:             "Langchain",
+		FeaturesPreamble:  "The following general features of Langchain are supported:",
+		ProvidersPreamble: "Models/providers are generally supported transitively by our instrumentation of the provider's module.",
 		Features: []AiCompatFeature{
 			{"Agents", true},
 			{"Chains", true},

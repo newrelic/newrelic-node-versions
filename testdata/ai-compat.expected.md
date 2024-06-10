@@ -27,13 +27,11 @@ Note: if a model supports streaming, we also instrument the streaming variant.
 
 The following general features of Langchain are supported:
 
-| Agents | Chains | Vectorstores | Tools |
+| Agents | Chains | Tools | Vectorstores |
 | --- | --- | --- | --- |
-| ✅ | ✅ | ✅ | ❌ |
+| ✅ | ✅ | ✅ | ✅ |
 
-
-Models/providers are generally supported transitively by our instrumentation of
-the provider's module.
+Models/providers are generally supported transitively by our instrumentation of the provider's module.
 
 | Provider | Supported | Transitively |
 | --- | --- | --- |

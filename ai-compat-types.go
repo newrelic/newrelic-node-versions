@@ -7,13 +7,15 @@ const AiCompatKindSdk = "sdk"
 type AiCompatJson []AiCompatEnvelope
 
 type AiCompatEnvelope struct {
-	Kind      string             `json:"kind"`
-	Title     string             `json:"title"`
-	Preamble  string             `json:"preamble"`
-	Footnote  string             `json:"footnote"`
-	Models    []AiCompatModel    `json:"models,omitempty"`
-	Features  []AiCompatFeature  `json:"features,omitempty"`
-	Providers []AiCompatProvider `json:"providers,omitempty"`
+	Kind              string             `json:"kind"`
+	Title             string             `json:"title"`
+	Preamble          string             `json:"preamble"`
+	Footnote          string             `json:"footnote"`
+	FeaturesPreamble  string             `json:"featuresPreamble"`
+	ProvidersPreamble string             `json:"providersPreamble"`
+	Models            []AiCompatModel    `json:"models,omitempty"`
+	Features          []AiCompatFeature  `json:"features,omitempty"`
+	Providers         []AiCompatProvider `json:"providers,omitempty"`
 }
 
 type AiCompatGateway struct {
@@ -21,6 +23,14 @@ type AiCompatGateway struct {
 	Preamble string
 	Footnote string
 	Models   []AiCompatGatewayModel
+}
+
+type AiCompatAbstraction struct {
+	Title             string
+	FeaturesPreamble  string
+	ProvidersPreamble string
+	Features          []AiCompatFeature
+	Providers         []AiCompatProvider
 }
 
 type AiCompatGatewayModel struct {
@@ -45,10 +55,11 @@ type AiCompatProvider struct {
 }
 
 type AiCompatTemplateData struct {
-	Gateways  []AiCompatGateway
-	Bedrock   AiCompatBedrockData
-	Langchain AiCompatLangchainData
-	Openai    AiCompatOpenaiData
+	Abstractions []AiCompatAbstraction
+	Gateways     []AiCompatGateway
+	Bedrock      AiCompatBedrockData
+	Langchain    AiCompatLangchainData
+	Openai       AiCompatOpenaiData
 }
 
 type AiCompatBedrockData struct {
