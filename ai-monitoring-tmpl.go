@@ -51,10 +51,13 @@ func aiCompatReadJson(file io.Reader) (AiCompatJson, error) {
 	return result, err
 }
 
+// aiCompatBuildTmplData translates the parsed JSON data into a structure
+// that our template is able to use.
 func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
 	result := AiCompatTemplateData{
 		Abstractions: make([]AiCompatAbstraction, 0),
 		Gateways:     make([]AiCompatGateway, 0),
+		Sdks:         make([]AiCompatSdk, 0),
 	}
 
 	for _, envelope := range input {
@@ -66,29 +69,27 @@ func aiCompatBuildTmplData(input AiCompatJson) AiCompatTemplateData {
 			abstraction := aiCompatParseAbstraction(envelope)
 			result.Abstractions = append(result.Abstractions, abstraction)
 		case AiCompatKindSdk:
-			result.Openai = aiCompatParseOpenaiData(envelope)
+			sdk := aiCompatParseSdk(envelope)
+			result.Sdks = append(result.Sdks, sdk)
 		}
 	}
 
 	return result
 }
 
+// aiCompatParseGateway translates an envelope of `kind = "gateway"` into
+// a narrow gateway type.
 func aiCompatParseGateway(input AiCompatEnvelope) AiCompatGateway {
-	result := AiCompatGateway{
+	return AiCompatGateway{
 		Title:    input.Title,
 		Preamble: input.Preamble,
 		Footnote: input.Footnote,
+		Models:   input.Models,
 	}
-
-	models := make([]AiCompatGatewayModel, 0)
-	for _, model := range input.Models {
-		models = append(models, AiCompatGatewayModel{model.Name, model.Features})
-	}
-	result.Models = models
-
-	return result
 }
 
+// aiCompatParseAbstraction translates an envelope of `kind = "abstraction"`
+// into a narrow abstraction type.
 func aiCompatParseAbstraction(input AiCompatEnvelope) AiCompatAbstraction {
 	return AiCompatAbstraction{
 		Title:             input.Title,
@@ -99,11 +100,22 @@ func aiCompatParseAbstraction(input AiCompatEnvelope) AiCompatAbstraction {
 	}
 }
 
+// aiCompatParseSdk translates an envelope of `kind = "sdk"` into a narrow
+// sdk type.
+func aiCompatParseSdk(input AiCompatEnvelope) AiCompatSdk {
+	return AiCompatSdk{
+		Title:            input.Title,
+		FeaturesPreamble: input.FeaturesPreamble,
+		Features:         input.Features,
+	}
+}
+
+// aiCompatLoadTemplate loads the templated Markdown into a [text/template]
+// instance that has all of our custom utility methods attached to it.
 func aiCompatLoadTemplate() (*template.Template, error) {
 	tmpl := template.New("aiMonitoring")
 
 	tmpl.Funcs(template.FuncMap{
-		"boolEmoji":            aiCompatBoolEmoji,
 		"featuresToTable":      aiFeaturesToTable,
 		"gatewayModelsToTable": aiModelsToTable,
 		"providersToTable":     aiProvidersToTable,
@@ -117,29 +129,6 @@ func aiCompatLoadTemplate() (*template.Template, error) {
 	return tmpl, nil
 }
 
-func aiCompatParseOpenaiData(envelope AiCompatEnvelope) AiCompatOpenaiData {
-	result := AiCompatOpenaiData{}
-
-	for _, feature := range envelope.Features {
-		switch strings.ToLower(feature.Title) {
-		case "completions":
-			result.Completions = feature.Supported
-		case "chat":
-			result.Chat = feature.Supported
-		case "embeddings":
-			result.Embeddings = feature.Supported
-		case "files":
-			result.Files = feature.Supported
-		case "images":
-			result.Images = feature.Supported
-		case "audio":
-			result.Audio = feature.Supported
-		}
-	}
-
-	return result
-}
-
 // aiCompatBoolEmoji converts a boolean into emoji text representing the
 // respective value.
 func aiCompatBoolEmoji(input bool) string {
@@ -151,7 +140,7 @@ func aiCompatBoolEmoji(input bool) string {
 
 // aiModelsToTable renders a set of gateway objects into a Markdown table.
 // It is added to the AI Monitoring template as a convenience function.
-func aiModelsToTable(input []AiCompatGatewayModel) string {
+func aiModelsToTable(input []AiCompatModel) string {
 	result := strings.Builder{}
 
 	featureTitles := make([]string, 0)
@@ -163,7 +152,7 @@ func aiModelsToTable(input []AiCompatGatewayModel) string {
 	result.WriteString(titlesToTableHeader(featureTitles))
 
 	for _, model := range input {
-		row := fmt.Sprintf("| %s |", model.Title)
+		row := fmt.Sprintf("| %s |", model.Name)
 		slices.SortFunc(model.Features, sortFeaturesFn)
 		for _, feature := range model.Features {
 			row = fmt.Sprintf("%s %s |", row, aiCompatBoolEmoji(feature.Supported))

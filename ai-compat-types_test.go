@@ -60,8 +60,9 @@ func Test_AiCompatJson(t *testing.T) {
 	assert.Equal(t, expectedAbstraction, parsed[2])
 
 	expectedSdk := AiCompatEnvelope{
-		Kind:  AiCompatKindSdk,
-		Title: "OpenAI",
+		Kind:             AiCompatKindSdk,
+		Title:            "OpenAI",
+		FeaturesPreamble: "Through the `openai` module, we support:",
 		Features: []AiCompatFeature{
 			{"Completions", true},
 			{"Chat", true},

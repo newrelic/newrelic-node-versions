@@ -91,6 +91,7 @@
   {
     "kind": "sdk",
     "title": "OpenAI",
+    "featuresPreamble": "Through the `openai` module, we support:",
     "features": [
       {
         "title": "Completions",

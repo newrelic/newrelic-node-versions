@@ -24,12 +24,10 @@ The Node.js agent supports the following AI platforms and integrations.
 {{providersToTable .Providers}}
 {{end}}
 
-### OpenAI
+{{range .Sdks -}}
+### {{.Title}}
 
-Through the `openai` module, we support:
+{{if .FeaturesPreamble}}{{.FeaturesPreamble}}{{end}}
 
-| Completions | Chat | Embeddings | Files | Images | Audio |
-| --- | --- | --- | --- | --- | --- |
-{{- with .Openai}}
-| {{boolEmoji .Completions}} | {{boolEmoji .Chat}} | {{boolEmoji .Embeddings}} | {{boolEmoji .Files}} | {{boolEmoji .Images}} | {{boolEmoji .Audio}} |
+{{featuresToTable .Features}}
 {{end}}

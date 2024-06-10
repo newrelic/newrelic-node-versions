@@ -6,25 +6,31 @@ const AiCompatKindSdk = "sdk"
 
 type AiCompatJson []AiCompatEnvelope
 
+// AiCompatEnvelope represents the generic structure of objects found within
+// the AI compatability JSON descriptor document.
 type AiCompatEnvelope struct {
 	Kind              string             `json:"kind"`
 	Title             string             `json:"title"`
-	Preamble          string             `json:"preamble"`
-	Footnote          string             `json:"footnote"`
-	FeaturesPreamble  string             `json:"featuresPreamble"`
-	ProvidersPreamble string             `json:"providersPreamble"`
+	Preamble          string             `json:"preamble,omitempty"`
+	Footnote          string             `json:"footnote,omitempty"`
+	FeaturesPreamble  string             `json:"featuresPreamble,omitempty"`
+	ProvidersPreamble string             `json:"providersPreamble,omitempty"`
 	Models            []AiCompatModel    `json:"models,omitempty"`
 	Features          []AiCompatFeature  `json:"features,omitempty"`
 	Providers         []AiCompatProvider `json:"providers,omitempty"`
 }
 
+// AiCompatGateway is a narrow type derived from an [AiCompatEnvelope] with
+// `kind = "gateway"`.
 type AiCompatGateway struct {
 	Title    string
 	Preamble string
 	Footnote string
-	Models   []AiCompatGatewayModel
+	Models   []AiCompatModel
 }
 
+// AiCompatAbstraction is a narrow type derived from an [AiCompatEnvelope] with
+// `kind = "abstraction"`.
 type AiCompatAbstraction struct {
 	Title             string
 	FeaturesPreamble  string
@@ -33,9 +39,12 @@ type AiCompatAbstraction struct {
 	Providers         []AiCompatProvider
 }
 
-type AiCompatGatewayModel struct {
-	Title    string
-	Features []AiCompatFeature
+// AiCompatSdk is a narrow type derived from an [AiCompatEnvelope] with
+// `kind = "sdk"`.
+type AiCompatSdk struct {
+	Title            string
+	FeaturesPreamble string
+	Features         []AiCompatFeature
 }
 
 type AiCompatFeature struct {
@@ -54,43 +63,10 @@ type AiCompatProvider struct {
 	Transitively bool   `json:"transitively"`
 }
 
+// AiCompatTemplateData represents the context that will be utilized by the
+// template engine to render the human readable Markdown document.
 type AiCompatTemplateData struct {
 	Abstractions []AiCompatAbstraction
 	Gateways     []AiCompatGateway
-	Bedrock      AiCompatBedrockData
-	Langchain    AiCompatLangchainData
-	Openai       AiCompatOpenaiData
-}
-
-type AiCompatBedrockData struct {
-	Title  string
-	Models []struct {
-		Name  string
-		Text  bool
-		Image bool
-	}
-}
-
-type AiCompatLangchainData struct {
-	Title    string
-	Features struct {
-		Agents       bool
-		Chains       bool
-		Vectorstores bool
-		Tools        bool
-	}
-	Providers []struct {
-		Name         string
-		Supported    bool
-		Transitively bool
-	}
-}
-
-type AiCompatOpenaiData struct {
-	Completions bool
-	Chat        bool
-	Embeddings  bool
-	Files       bool
-	Images      bool
-	Audio       bool
+	Sdks         []AiCompatSdk
 }

@@ -43,7 +43,7 @@ Models/providers are generally supported transitively by our instrumentation of 
 
 Through the `openai` module, we support:
 
-| Completions | Chat | Embeddings | Files | Images | Audio |
+| Audio | Chat | Completions | Embeddings | Files | Images |
 | --- | --- | --- | --- | --- | --- |
-| ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 
