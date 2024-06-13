@@ -28,6 +28,7 @@ func Test_AiCompatJson(t *testing.T) {
 				Features: []AiCompatFeature{
 					{"Text", true},
 					{"Image", false},
+					{"Vision", false},
 				},
 			},
 			{

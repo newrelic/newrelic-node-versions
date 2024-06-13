@@ -15,6 +15,10 @@
           {
             "title": "Image",
             "supported": false
+          },
+          {
+            "title": "Vision",
+            "supported": false
           }
         ]
       },
@@ -46,6 +50,13 @@
           {"title": "Two", "supported": false},
           {"title": "Three", "supported": false},
           {"title": "Four", "supported": true}
+        ]
+      },
+      {
+        "name": "Bar Model",
+        "features": [
+          {"title": "One", "supported":  true},
+          {"title": "Three", "supported":  false}
         ]
       }
     ]

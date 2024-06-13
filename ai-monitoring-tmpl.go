@@ -151,13 +151,38 @@ func aiModelsToTable(input []AiCompatModel) string {
 	featureTitles = append([]string{"Model"}, featureTitles...)
 	result.WriteString(titlesToTableHeader(featureTitles))
 
-	for _, model := range input {
-		row := fmt.Sprintf("| %s |", model.Name)
-		slices.SortFunc(model.Features, sortFeaturesFn)
-		for _, feature := range model.Features {
-			row = fmt.Sprintf("%s %s |", row, aiCompatBoolEmoji(feature.Supported))
+	// Gateways have multiple models behind them. Each model usually has an
+	// overlapping feature set, but each model may have a feature other models
+	// in the list do not. Which means we have a mismatch in the number of
+	// columns. So we need to build out our rows in a manner such that we can
+	// add "gap" columns if a model does not have a feature found in some other
+	// model.
+	modelNames := make([]string, 0)
+	rows := make(map[string]string)
+	for _, title := range featureTitles {
+		if title == "Model" {
+			for _, model := range input {
+				modelNames = append(modelNames, model.Name)
+				rows[model.Name] = fmt.Sprintf("| %s |", model.Name)
+			}
+			continue
 		}
-		result.WriteString(row + "\n")
+
+		for _, model := range input {
+			name := model.Name
+			idx := slices.IndexFunc(model.Features, func(f AiCompatFeature) bool { return f.Title == title })
+			if idx == -1 {
+				rows[name] += " - |"
+			} else {
+				feature := model.Features[idx]
+				rows[name] = fmt.Sprintf("%s %s |", rows[name], aiCompatBoolEmoji(feature.Supported))
+			}
+		}
+	}
+
+	slices.Sort(modelNames)
+	for _, name := range modelNames {
+		result.WriteString(rows[name] + "\n")
 	}
 
 	return strings.TrimSpace(result.String())
