@@ -6,10 +6,10 @@ The Node.js agent supports the following AI platforms and integrations.
 
 Through the `@aws-sdk/client-bedrock-runtime` module, we support:
 
-| Model | Image | Text |
-| --- | --- | --- |
-| Claude | ❌ | ✅ |
-| Cohere | ❌ | ✅ |
+| Model | Image | Text | Vision |
+| --- | --- | --- | --- |
+| Claude | ❌ | ✅ | ❌ |
+| Cohere | ❌ | ✅ | - |
 
 Note: if a model supports streaming, we also instrument the streaming variant.
 ### Foo Gateway
@@ -18,6 +18,7 @@ Note: if a model supports streaming, we also instrument the streaming variant.
 
 | Model | Four | One | Three | Two |
 | --- | --- | --- | --- | --- |
+| Bar Model | - | ✅ | ❌ | - |
 | Foo Model | ✅ | ✅ | ❌ | ❌ |
 
 
