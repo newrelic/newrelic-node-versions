@@ -8,10 +8,11 @@ import (
 )
 
 type nrRepo struct {
-	repoDir  string
-	url      string
-	branch   string
-	testPath string
+	isMainRepo bool
+	repoDir    string
+	url        string
+	branch     string
+	testPath   string
 }
 
 type dirIterChan struct {
@@ -22,6 +23,12 @@ type dirIterChan struct {
 
 // CloneRepoResult represents the status of Git repository clone operation.
 type CloneRepoResult struct {
+	// IsMainRepo indicates if the clone represents the mainline Node.js Agent
+	// repository. The mainline repo includes extra configuration that is needed
+	// by the tool. Since cloning happens concurrently, we don't know which
+	// of the results is the mainline repo simply by index.
+	IsMainRepo bool
+
 	// Directory is the path on the file system that contains the cloned
 	// repository.
 	Directory string
