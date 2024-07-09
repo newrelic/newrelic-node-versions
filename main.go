@@ -29,7 +29,12 @@ import (
 //go:embed tmpl/preamble.md
 var docPreamble string
 
-var agentRepo = nrRepo{url: `https://github.com/newrelic/node-newrelic.git`, branch: `main`, testPath: `test/versioned`}
+var agentRepo = nrRepo{
+	url:        `https://github.com/newrelic/node-newrelic.git`,
+	branch:     `main`,
+	testPath:   `test/versioned`,
+	isMainRepo: true,
+}
 var externalsRepos = []nrRepo{
 	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
 	{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`},
@@ -105,8 +110,11 @@ func run(args []string) error {
 	data := processVersionedTestDirs(testDirs, logger)
 
 	aiCompatInputFile := flags.aiCompatJsonFile
+	mainRepoClone := cloneResults[slices.IndexFunc(cloneResults, func(s CloneRepoResult) bool {
+		return s.IsMainRepo == true
+	})]
 	if aiCompatInputFile == "" {
-		aiCompatInputFile = path.Join(cloneResults[0].Directory, "ai-support.json")
+		aiCompatInputFile = path.Join(mainRepoClone.Directory, "ai-support.json")
 	}
 	aiCompatDoc := strings.Builder{}
 	err = RenderAiCompatDoc(aiCompatInputFile, &aiCompatDoc)
@@ -327,6 +335,7 @@ func cloneRepos(repos []nrRepo, logger *slog.Logger) []CloneRepoResult {
 		go func(r nrRepo) {
 			defer wg.Done()
 			cloneResult := cloneRepo(r, logger)
+			cloneResult.IsMainRepo = r.isMainRepo
 			result = append(result, cloneResult)
 		}(repo)
 	}
