@@ -77,7 +77,7 @@ func run(args []string) error {
 		} else {
 			testDir = "test/versioned"
 		}
-		var testRepo = nrRepo{repoDir: repoDir, testPath: testDir}
+		var testRepo = nrRepo{repoDir: repoDir, testPath: testDir, isMainRepo: true}
 		repos = []nrRepo{testRepo}
 	} else {
 		repos = []nrRepo{agentRepo}
