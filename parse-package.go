@@ -90,6 +90,7 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 			MinAgentVersion: target.MinAgentVersion,
 		}
 		results = append(results, pkgInfo)
+		lastVersion = nil
 	}
 
 	return results, nil

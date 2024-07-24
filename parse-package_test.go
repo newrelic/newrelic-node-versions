@@ -38,6 +38,31 @@ func Test_ParsePackage(t *testing.T) {
 		}})
 	})
 
+	t.Run("handles multiple packages in one descriptor", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/koa/package.json", []PkgInfo{
+			{
+				Name:            "koa",
+				MinVersion:      "2.0.0",
+				MinAgentVersion: "3.2.0",
+			},
+			{
+				Name:            "koa-route",
+				MinVersion:      "3.0.0",
+				MinAgentVersion: "3.2.0",
+			},
+			{
+				Name:            "koa-router",
+				MinVersion:      "7.1.0",
+				MinAgentVersion: "3.2.0",
+			},
+			{
+				Name:            "@koa/router",
+				MinVersion:      "8.0.0",
+				MinAgentVersion: "3.2.0",
+			},
+		})
+	})
+
 	t.Run("handles @langchain/core", func(t *testing.T) {
 		testPkg(t, "testdata/versioned/langchain/package.json", []PkgInfo{{
 			Name:            "@langchain/core",
