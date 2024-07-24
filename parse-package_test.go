@@ -10,15 +10,19 @@ import (
 )
 
 func testPkg(t *testing.T, jsonFile string, expected []PkgInfo) {
+	pkgJson := readJsonFile(t, jsonFile)
+	found, err := parsePackage(&pkgJson)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, found)
+}
+
+func readJsonFile(t *testing.T, jsonFile string) VersionedTestPackageJson {
 	var pkgJson VersionedTestPackageJson
 	file, err := os.ReadFile(jsonFile)
 	require.Nil(t, err)
 	err = json.Unmarshal(file, &pkgJson)
 	require.Nil(t, err)
-
-	found, err := parsePackage(&pkgJson)
-	assert.Nil(t, err)
-	assert.Equal(t, expected, found)
+	return pkgJson
 }
 
 func Test_ParsePackage(t *testing.T) {
@@ -35,6 +39,22 @@ func Test_ParsePackage(t *testing.T) {
 			Name:            "@elastic/elasticsearch",
 			MinVersion:      "7.16.0",
 			MinAgentVersion: "1.2.3",
+		}})
+	})
+
+	t.Run("handles @langchain/core", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/langchain/package.json", []PkgInfo{{
+			Name:            "@langchain/core",
+			MinVersion:      "0.1.17",
+			MinAgentVersion: "2.1.3",
+		}})
+	})
+
+	t.Run("handles mongodb", func(t *testing.T) {
+		testPkg(t, "testdata/versioned/mongodb/package.json", []PkgInfo{{
+			Name:            "mongodb",
+			MinVersion:      "2.1.0",
+			MinAgentVersion: "1.0.0",
 		}})
 	})
 
@@ -63,20 +83,13 @@ func Test_ParsePackage(t *testing.T) {
 		})
 	})
 
-	t.Run("handles @langchain/core", func(t *testing.T) {
-		testPkg(t, "testdata/versioned/langchain/package.json", []PkgInfo{{
-			Name:            "@langchain/core",
-			MinVersion:      "0.1.17",
-			MinAgentVersion: "2.1.3",
-		}})
-	})
-
-	t.Run("handles mongodb", func(t *testing.T) {
-		testPkg(t, "testdata/versioned/mongodb/package.json", []PkgInfo{{
-			Name:            "mongodb",
-			MinVersion:      "2.1.0",
-			MinAgentVersion: "1.0.0",
-		}})
+	t.Run("handles aws-sdk-v3 with missing dep", func(t *testing.T) {
+		// This test verifies that if a target is specified, but no test descriptor
+		// exists which explicitly tests that target, then an error will occur.
+		pkg := readJsonFile(t, "testdata/versioned/aws-sdk-v3/package.json")
+		found, err := parsePackage(&pkg)
+		assert.Nil(t, found)
+		assert.ErrorIs(t, err, ErrTargetMissing)
 	})
 
 	t.Run("gets minimum range from ordered ORed ranges", func(t *testing.T) {
