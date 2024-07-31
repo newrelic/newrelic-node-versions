@@ -37,7 +37,6 @@ var agentRepo = nrRepo{
 }
 var externalsRepos = []nrRepo{
 	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
-	{url: `https://github.com/newrelic/newrelic-node-nextjs.git`, branch: `main`, testPath: `tests/versioned`},
 }
 
 var columHeaders = map[string]string{
