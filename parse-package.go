@@ -33,44 +33,18 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 
 	results := make([]PkgInfo, 0)
 	for _, target := range targets {
-		for _, test := range pkg.Tests {
-			if test.Supported == false {
-				continue
+		if target.MinSupported == "" {
+			version, err := findMinimumSupported(target, pkg.Tests)
+			if err != nil {
+				return nil, err
 			}
-
-			// We need to find the minimum version of the target module by looking
-			// through the dependencies list and the inspecting the semver range
-			// strings associated with it.
-			for key, val := range test.Dependencies {
-				if key != target.Name {
-					continue
-				}
-
-				var currentVersion semver.Range
-
-				// The semver library does not parse strings like `>1.0.0 <2.0.0 || >3.0.0`.
-				// So we need to split it up and normalize the pieces into range strings
-				// it can understand.
-				rangeStrings := strings.Split(val.Versions, "||")
-				for k, v := range rangeStrings {
-					// Oh, Go, why no slices.Map?
-					rangeStrings[k] = normalizeRangeString(v)
-				}
-
-				currentVersion, err := processRangeStrings(rangeStrings)
-				if err != nil {
-					return nil, fmt.Errorf("`%s` => `%s`: %w", target, val.Versions, err)
-				}
-
-				if lastVersion == nil {
-					lastVersion = &currentVersion
-					continue
-				}
-
-				if isRangeLower(currentVersion, *lastVersion) == true {
-					lastVersion = &currentVersion
-				}
+			lastVersion = version
+		} else {
+			version, err := semver.NewRange([]byte(target.MinSupported))
+			if err != nil {
+				return nil, fmt.Errorf("%s: could not parse minSupported string '%s'", pkg.Name, target.MinSupported)
 			}
+			lastVersion = &version
 		}
 
 		if lastVersion == nil {
@@ -94,6 +68,54 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 	}
 
 	return results, nil
+}
+
+// findMinimumSupported iterates through a set of versioned test descriptors
+// to find the minimum version of the target that is covered by the tests.
+func findMinimumSupported(target Target, tests []TestDescription) (*semver.Range, error) {
+	var lastVersion *semver.Range
+
+	for _, test := range tests {
+		if test.Supported == false {
+			continue
+		}
+
+		// We need to find the minimum version of the target module by looking
+		// through the dependencies list and the inspecting the semver range
+		// strings associated with it.
+		for key, val := range test.Dependencies {
+			if key != target.Name {
+				continue
+			}
+
+			var currentVersion semver.Range
+
+			// The semver library does not parse strings like `>1.0.0 <2.0.0 || >3.0.0`.
+			// So we need to split it up and normalize the pieces into range strings
+			// it can understand.
+			rangeStrings := strings.Split(val.Versions, "||")
+			for k, v := range rangeStrings {
+				// Oh, Go, why no slices.Map?
+				rangeStrings[k] = normalizeRangeString(v)
+			}
+
+			currentVersion, err := processRangeStrings(rangeStrings)
+			if err != nil {
+				return nil, fmt.Errorf("`%s` => `%s`: %w", target, val.Versions, err)
+			}
+
+			if lastVersion == nil {
+				lastVersion = &currentVersion
+				continue
+			}
+
+			if isRangeLower(currentVersion, *lastVersion) == true {
+				lastVersion = &currentVersion
+			}
+		}
+	}
+
+	return lastVersion, nil
 }
 
 // processRangeStrings iterates a slice of semver range strings and returns

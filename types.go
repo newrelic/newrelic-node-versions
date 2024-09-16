@@ -59,6 +59,7 @@ type ReleaseData struct {
 
 type Target struct {
 	Name            string `json:"name"`
+	MinSupported    string `json:"minSupported"`
 	MinAgentVersion string `json:"minAgentVersion"`
 }
 
