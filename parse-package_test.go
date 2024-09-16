@@ -115,6 +115,14 @@ func Test_ParsePackage(t *testing.T) {
 			MinAgentVersion: "1.0.0",
 		}})
 	})
+
+	t.Run("handles targets with minSupported defined", func(t *testing.T) {
+		testPkg(t, "testdata/min-supported.json", []PkgInfo{{
+			Name:            "foo",
+			MinVersion:      "0.3.0",
+			MinAgentVersion: "1.0.0",
+		}})
+	})
 }
 
 func Test_processRangeStrings(t *testing.T) {

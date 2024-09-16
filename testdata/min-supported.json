@@ -1,0 +1,9 @@
+{
+  "name": "foo-tests",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "targets": [
+    {"name":  "foo", "minSupported":  "0.3.0", "minAgentVersion": "1.0.0"}
+  ]
+}
