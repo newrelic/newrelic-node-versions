@@ -48,7 +48,11 @@ func parsePackage(pkg *VersionedTestPackageJson) ([]PkgInfo, error) {
 		}
 
 		if lastVersion == nil {
-			return nil, fmt.Errorf("%s: %w", pkg.Name, ErrTargetMissing)
+			if target.Name != "" {
+				return nil, fmt.Errorf("%s (%s): %w", pkg.Name, target.Name, ErrTargetMissing)
+			} else {
+				return nil, fmt.Errorf("%s: %w", pkg.Name, ErrTargetMissing)
+			}
 		}
 
 		minVersion := lastVersion.GetLowerBoundary()
