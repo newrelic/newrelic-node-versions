@@ -17,4 +17,10 @@ func Test_createAndParseFlags(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, expected, flags)
 	})
+
+	t.Run("no-externals", func(t *testing.T) {
+		err := createAndParseFlags([]string{"--no-externals"})
+		assert.Nil(t, err)
+		assert.Equal(t, true, flags.noExternals)
+	})
 }

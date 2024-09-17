@@ -7,6 +7,7 @@ require (
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/dusted-go/logging v1.3.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/jsumners/go-rfc3339 v1.2.0
 	github.com/spf13/afero v1.11.0

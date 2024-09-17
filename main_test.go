@@ -90,7 +90,7 @@ func Test_processVersionedTestDirs(t *testing.T) {
 
 		releaseData := processVersionedTestDirs(testDirs, logger)
 		assert.Equal(t, 0, len(collector.logs))
-		assert.Equal(t, 7, len(releaseData))
+		assert.Equal(t, 14, len(releaseData))
 	})
 }
 
