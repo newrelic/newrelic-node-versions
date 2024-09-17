@@ -86,7 +86,7 @@ func Test_ParsePackage(t *testing.T) {
 	t.Run("handles aws-sdk-v3 with missing dep", func(t *testing.T) {
 		// This test verifies that if a target is specified, but no test descriptor
 		// exists which explicitly tests that target, then an error will occur.
-		pkg := readJsonFile(t, "testdata/versioned/aws-sdk-v3/package.json")
+		pkg := readJsonFile(t, "testdata/missing-test-target.json")
 		found, err := parsePackage(&pkg)
 		assert.Nil(t, found)
 		assert.ErrorIs(t, err, ErrTargetMissing)

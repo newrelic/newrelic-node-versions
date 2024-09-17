@@ -1,0 +1,13 @@
+{
+  "name": "missing-test-target",
+  "targets": [{ "name": "foo", "minAgentVersion": "1.0.0" }],
+  "tests": [
+    {
+      "dependencies": {
+        "bar": {
+          "versions": "latest"
+        }
+      }
+    }
+  ]
+}

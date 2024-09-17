@@ -49,14 +49,14 @@ var columHeaders = map[string]string{
 var appFS = afero.NewOsFs()
 
 func main() {
-	err := run(os.Args)
+	err := Run(os.Args[1:])
 	if err != nil {
 		fmt.Printf("app error: %v", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
+func Run(args []string) error {
 	err := createAndParseFlags(args)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
