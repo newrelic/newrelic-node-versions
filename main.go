@@ -42,7 +42,7 @@ var externalsRepos = []nrRepo{
 var columHeaders = map[string]string{
 	"Name":                `Package name`,
 	"MinSupportedVersion": `Minimum supported version`,
-	"LatestVersion":       `Latest supported version`,
+	"LatestVersion":       `Latest published version`,
 	"MinAgentVersion":     `Introduced in*`,
 }
 
