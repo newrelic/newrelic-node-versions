@@ -1,12 +1,12 @@
 module nrversions
 
-go 1.24
+go 1.24.0
 
 require (
 	blitznote.com/src/semver/v3 v3.2.2
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/dusted-go/logging v1.3.0
-	github.com/go-git/go-git/v5 v5.14.0
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/jsumners/go-rfc3339 v1.2.0
@@ -38,10 +38,10 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
