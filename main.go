@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dusted-go/logging/prettylog"
-	"github.com/spf13/afero"
 	"io"
 	"log/slog"
 	"os"
@@ -15,6 +13,9 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/dusted-go/logging/prettylog"
+	"github.com/spf13/afero"
 
 	_ "embed"
 
@@ -35,9 +36,12 @@ var agentRepo = nrRepo{
 	testPath:   `test/versioned`,
 	isMainRepo: true,
 }
-var externalsRepos = []nrRepo{
-	{url: `https://github.com/newrelic/newrelic-node-apollo-server-plugin.git`, branch: `main`, testPath: `tests/versioned`},
-}
+
+// externalsRepos specifies the list of secondary repositories that contain
+// code which augments the agent. As of 2026-05, we do not have any such
+// repositories. But we keep this feature hit just in case we encounter some
+// situation in the future that necessitates us adding another such repo.
+var externalsRepos = make([]nrRepo, 0)
 
 var columHeaders = map[string]string{
 	"Name":                `Package name`,

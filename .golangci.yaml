@@ -1,10 +1,15 @@
+version: '2'
+
 linters:
-  disable-all: true
+  default: none
   enable:
-    - gofmt
     - govet
     - gocritic
 
-linters-settings:
-  gofmt:
-    simplify: false
+formatters:
+  enable:
+    - gofmt
+
+  settings:
+    gofmt:
+      simplify: false

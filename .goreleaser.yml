@@ -4,6 +4,7 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
+
 builds:
   - main: .
     binary: nrversions
@@ -16,10 +17,13 @@ builds:
     goarch:
       - amd64
       - arm64
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
+
 changelog:
   sort: asc
   filters:
