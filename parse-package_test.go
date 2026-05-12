@@ -1,12 +1,13 @@
 package main
 
 import (
-	"blitznote.com/src/semver/v3"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+
+	"blitznote.com/src/semver/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testPkg(t *testing.T, jsonFile string, expected []PkgInfo) {
@@ -122,6 +123,21 @@ func Test_ParsePackage(t *testing.T) {
 			MinVersion:      "0.3.0",
 			MinAgentVersion: "1.0.0",
 		}})
+	})
+
+	t.Run("handles both dependencies and groupedDependencies", func(t *testing.T) {
+		testPkg(t, "testdata/baseline.json", []PkgInfo{
+			{
+				Name:            "foo",
+				MinVersion:      "0.3.0",
+				MinAgentVersion: "1.0.0",
+			},
+			{
+				Name:            "baz",
+				MinVersion:      "1.0.0",
+				MinAgentVersion: "1.0.0",
+			},
+		})
 	})
 }
 

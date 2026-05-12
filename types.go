@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
 	"github.com/spf13/cast"
 )
 
@@ -72,11 +73,12 @@ type VersionedTestPackageJson struct {
 }
 
 type TestDescription struct {
-	Supported    bool              `json:"supported"`
-	Comment      string            `json:"comment"`
-	Engines      EnginesBlock      `json:"engines"`
-	Dependencies DependenciesBlock `json:"dependencies"`
-	Files        FilesBlock        `json:"files"`
+	Supported           bool                     `json:"supported"`
+	Comment             string                   `json:"comment"`
+	Engines             EnginesBlock             `json:"engines"`
+	Dependencies        DependenciesBlock        `json:"dependencies"`
+	GroupedDependencies GroupedDependenciesBlock `json:"groupedDependencies"`
+	Files               FilesBlock               `json:"files"`
 }
 
 func (td *TestDescription) UnmarshalJSON(data []byte) error {
@@ -144,10 +146,16 @@ type EnginesBlock struct {
 type FilesBlock []string
 
 type DependenciesBlock map[string]DependencyBlock
+type GroupedDependenciesBlock map[string]GroupedDependencyBlock
 
 type DependencyBlock struct {
 	Versions string `json:"versions"`
 	Samples  int    `json:"samples"`
+}
+
+type GroupedDependencyBlock struct {
+	Version  string   `json:"version"`
+	Packages []string `json:"packages"`
 }
 
 func (db *DependenciesBlock) UnmarshalJSON(data []byte) error {
