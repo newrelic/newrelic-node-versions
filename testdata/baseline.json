@@ -20,10 +20,8 @@
     },
     {
       "groupedDependencies": {
-        "bar": {
           "version": ">=5.0.0",
           "packages": ["bar", "baz"]
-        }
       },
       "files": ["test2.js"]
     }
