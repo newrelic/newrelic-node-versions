@@ -5,8 +5,8 @@
     "node": ">=18.0.0"
   },
   "targets": [
-    {"name":  "foo", "minSupported":  "0.3.0", "minAgentVersion": "1.0.0"},
-    {"name":  "baz", "minSupported":  "1.0.0", "minAgentVersion":  "1.0.0"}
+    {"name":  "foo", "minAgentVersion": "1.0.0"},
+    {"name":  "baz", "minAgentVersion":  "1.0.0"}
   ],
   "tests": [
     {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"blitznote.com/src/semver/v3"
@@ -121,27 +122,33 @@ func findMinimumSupported(target Target, tests []TestDescription) (*semver.Range
 		} else if test.GroupedDependencies != nil {
 			// As above, but for a `groupedDependencies` block instead. We should
 			// always have one or the other.
-			for key, val := range test.GroupedDependencies {
-				if key != target.Name {
-					continue
-				}
+			if slices.Contains(test.GroupedDependencies.Packages, target.Name) == false {
+				// We are trying to find the minimum version across all defined "test"
+				// blocks for the given `target`. So we cannot return an error here
+				// if the `target` is not found in the grouped packages list.
+				continue
+			}
 
-				var currentVersion semver.Range
-				rangeStrings := strings.Split(val.Version, "||")
-				for k, v := range rangeStrings {
-					rangeStrings[k] = normalizeRangeString(v)
-				}
-				currentVersion, err := processRangeStrings(rangeStrings)
-				if err != nil {
-					return nil, fmt.Errorf("`%s` => `%s`: %w", target, val.Version, err)
-				}
-				if lastVersion == nil {
-					lastVersion = &currentVersion
-					continue
-				}
-				if isRangeLower(currentVersion, *lastVersion) == true {
-					lastVersion = &currentVersion
-				}
+			var currentVersion semver.Range
+			rangeStrings := strings.Split(test.GroupedDependencies.Version, "||")
+			for k, v := range rangeStrings {
+				rangeStrings[k] = normalizeRangeString(v)
+			}
+			currentVersion, err := processRangeStrings(rangeStrings)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"`%s` => `%s`: %w",
+					target,
+					test.GroupedDependencies.Version,
+					err,
+				)
+			}
+			if lastVersion == nil {
+				lastVersion = &currentVersion
+				continue
+			}
+			if isRangeLower(currentVersion, *lastVersion) == true {
+				lastVersion = &currentVersion
 			}
 		}
 	}

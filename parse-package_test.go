@@ -126,15 +126,15 @@ func Test_ParsePackage(t *testing.T) {
 	})
 
 	t.Run("handles both dependencies and groupedDependencies", func(t *testing.T) {
-		testPkg(t, "testdata/baseline.json", []PkgInfo{
+		testPkg(t, "testdata/grouped-dependencies.json", []PkgInfo{
 			{
 				Name:            "foo",
-				MinVersion:      "0.3.0",
+				MinVersion:      "4.0.0",
 				MinAgentVersion: "1.0.0",
 			},
 			{
 				Name:            "baz",
-				MinVersion:      "1.0.0",
+				MinVersion:      "5.0.0",
 				MinAgentVersion: "1.0.0",
 			},
 		})
